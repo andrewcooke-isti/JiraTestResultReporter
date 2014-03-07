@@ -33,6 +33,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 
+
 public class JiraReporter extends Notifier {
 
     public String projectKey;
@@ -48,7 +49,7 @@ public class JiraReporter extends Notifier {
 
     private static final int JIRA_SUCCESS_CODE = 201;
 
-    private static final String PluginName = new String("[JiraTestResultReporter]");
+    private static final String PluginName = "[JiraTestResultReporter]";
     private final String pInfo = String.format("%s [INFO]", PluginName);
     private final String pDebug = String.format("%s [DEBUG]", PluginName);
     private final String pVerbose = String.format("%s [DEBUGVERBOSE]", PluginName);
@@ -73,20 +74,14 @@ public class JiraReporter extends Notifier {
         this.password = password;
 
         this.verboseDebugFlag = verboseDebugFlag;
-        if (verboseDebugFlag) {
-            this.debugFlag = true;
-        } else {
-            this.debugFlag = debugFlag;
-        }
+        this.debugFlag = verboseDebugFlag || debugFlag;
         
         this.createAllFlag = createAllFlag;
     }
 
-    @Override
     public BuildStepMonitor getRequiredMonitorService() {
         return BuildStepMonitor.NONE;
     }
-
 
     @Override
     public boolean perform(final AbstractBuild build,
@@ -95,7 +90,7 @@ public class JiraReporter extends Notifier {
         PrintStream logger = listener.getLogger();
         logger.printf("%s Examining test results...%n", pInfo);
         debugLog(listener,
-                 String.format("Build result is %s%un",
+                 String.format("Build result is %s%n",
                     build.getResult().toString())
                 );
         this.workspace = build.getWorkspace();
@@ -164,7 +159,7 @@ public class JiraReporter extends Notifier {
                     ((AbstractHttpClient) httpClient).getCredentialsProvider().setCredentials(AuthScope.ANY, creds);
 
                     HttpPost postRequest = new HttpPost(url);
-                    String jsonPayLoad = new String("{\"fields\": {\"project\": {\"key\": \"" + this.projectKey + "\"},\"summary\": \"The test " + result.getName() + " failed " + result.getClassName() + ": " + result.getErrorDetails() + "\",\"description\": \"Test class: " + result.getClassName() + " -- " + result.getErrorStackTrace().replace(this.workspace.toString(), "") + "\",\"issuetype\": {\"name\": \"Bug\"}}}");
+                    String jsonPayLoad = "{\"fields\": {\"project\": {\"key\": \"" + this.projectKey + "\"},\"summary\": \"The test " + result.getName() + " failed " + result.getClassName() + ": " + result.getErrorDetails() + "\",\"description\": \"Test class: " + result.getClassName() + " -- " + result.getErrorStackTrace().replace(this.workspace.toString(), "") + "\",\"issuetype\": {\"name\": \"Bug\"}}}";
 //                     logger.printf("%s JSON payload: %n", pVerbose, jsonPayLoad);
                     logger.printf("%s Reporting issue.%n", pInfo);
                     StringEntity params = new StringEntity(jsonPayLoad);
@@ -241,5 +236,6 @@ public class JiraReporter extends Notifier {
         	return FormValidation.ok();
         }
     }
+
 }
 

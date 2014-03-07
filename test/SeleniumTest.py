@@ -2,6 +2,7 @@ import unittest, random
 from selenium import selenium
 
 class SeleniumTest(unittest.TestCase):
+
     def setUp(self):
         self.makeConfigStrings()
         self.loadCredentials()
