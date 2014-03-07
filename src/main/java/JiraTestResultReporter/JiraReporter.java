@@ -1,4 +1,5 @@
 package JiraTestResultReporter;
+
 import hudson.Launcher;
 import hudson.Extension;
 import hudson.FilePath;
@@ -94,7 +95,7 @@ public class JiraReporter extends Notifier {
         PrintStream logger = listener.getLogger();
         logger.printf("%s Examining test results...%n", pInfo);
         debugLog(listener,
-                 String.format("Build result is %s%n",
+                 String.format("Build result is %s%un",
                     build.getResult().toString())
                 );
         this.workspace = build.getWorkspace();
