@@ -15,14 +15,14 @@
   <name>Jenkins JiraTestResultReporter plugin</name>
   <description>Creates issues in Jira for failed unit tests.</description>
   
-  <developers>
+  <!-- developers>
     <developer>
       <id>maplesteve</id>
       <name>Stephan Esch</name>
     </developer>
-  </developers>
+  </developers -->
   
-  <url>https://wiki.jenkins-ci.org/display/JENKINS/JiraTestResultReporter-plugin</url>
+  <!-- url>https://wiki.jenkins-ci.org/display/JENKINS/JiraTestResultReporter-plugin</url -->
 
   <!-- scm>
     <connection>scm:git:ssh://github.com/jenkinsci/JiraTestResultReporter-plugin.git</connection>
