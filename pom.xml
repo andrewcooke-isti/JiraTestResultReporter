@@ -83,14 +83,30 @@
       <version>4.2.3</version>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>com.atlassian.jira</groupId>
+      <artifactId>jira-rest-java-client</artifactId>
+      <version>0.5</version>
+    </dependency>
   </dependencies>
-
-  <!-- get every artifact through repo.jenkins-ci.org, which proxies all the artifacts that we need -->
 
   <repositories>
     <repository>
       <id>repo.jenkins-ci.org</id>
       <url>http://repo.jenkins-ci.org/public/</url>
+    </repository>
+    <repository>
+      <id>atlassian-public</id>
+      <url>https://m2proxy.atlassian.com/repository/public</url>
+      <snapshots>
+        <enabled>true</enabled>
+        <updatePolicy>never</updatePolicy>
+        <checksumPolicy>warn</checksumPolicy>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+        <checksumPolicy>warn</checksumPolicy>
+      </releases>
     </repository>
   </repositories>
 
@@ -98,6 +114,17 @@
     <pluginRepository>
       <id>repo.jenkins-ci.org</id>
       <url>http://repo.jenkins-ci.org/public/</url>
+    </pluginRepository>
+    <pluginRepository>
+      <id>atlassian-public</id>
+      <url>https://m2proxy.atlassian.com/repository/public</url>
+      <releases>
+        <enabled>true</enabled>
+        <checksumPolicy>warn</checksumPolicy>
+      </releases>
+      <snapshots>
+        <checksumPolicy>warn</checksumPolicy>
+      </snapshots>
     </pluginRepository>
   </pluginRepositories>
 
