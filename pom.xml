@@ -59,7 +59,7 @@
         </plugin>
         <!-- stackoverflow.com/questions/574594http://stackoverflow.com/questions/574594/how-can-i-create-an-executable-jar-with-dependencies-using-maven/how-can-i-create-an-executable-jar-with-dependencies-using-maven
              build all deps using mvn clean compile assembly:single -->
-        <plugin>
+        <!-- plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
           <configuration>
@@ -78,7 +78,7 @@
               <descriptorRef>jar-with-dependencies</descriptorRef>
             </descriptorRefs>
           </configuration>
-        </plugin>
+        </plugin -->
       </plugins>
     </pluginManagement>
   </build>
