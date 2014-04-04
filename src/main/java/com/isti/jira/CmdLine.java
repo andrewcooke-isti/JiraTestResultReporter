@@ -1,26 +1,18 @@
 package com.isti.jira;
 
-import com.atlassian.jira.rest.client.AuthenticationHandler;
-import com.atlassian.jira.rest.client.JiraRestClient;
-import com.atlassian.jira.rest.client.ProgressMonitor;
-import com.atlassian.jira.rest.client.auth.AnonymousAuthenticationHandler;
-import com.atlassian.jira.rest.client.auth.BasicHttpAuthenticationHandler;
-import com.atlassian.jira.rest.client.domain.BasicProject;
-import com.atlassian.jira.rest.client.internal.jersey.JerseyJiraRestClientFactory;
+import com.atlassian.jira.rest.client.api.domain.BasicProject;
+import com.atlassian.jira.rest.client.api.domain.CimIssueType;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import io.airlift.command.*;
-import org.apache.tools.ant.Project;
 
-import javax.management.ObjectName;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Properties;
 
 import static java.lang.String.format;
+
 
 public class CmdLine {
 
@@ -28,12 +20,13 @@ public class CmdLine {
 
     private static final String DEFAULT_USER = "CATS";
     private static final String DEFAULT_URL = "http://localhost:8081";
+    private static final String DEFAULT_PROJECT = "CATS";
 
     public static void main(String[] args) {
         Cli.CliBuilder<Runnable> builder = Cli.<Runnable>builder("CmdLine")
                 .withDescription("Command line tool for Jira")
                 .withDefaultCommand(Help.class)
-                .withCommands(Help.class, CreateUser.class, ListProjects.class);
+                .withCommands(Help.class, ListProjects.class, ListIssueTypes.class, CreateIssue.class);
         Cli<Runnable> parser = builder.build();
         try {
             parser.parse(args).run();
@@ -48,40 +41,24 @@ public class CmdLine {
 
     private static class Connection {
 
-        @Option(type = OptionType.GLOBAL, name = "-u", description = "User to connect as")
+        @Option(type = OptionType.GLOBAL, name = "-U", description = "User to connect as")
         public String user;
 
-        @Option(type = OptionType.GLOBAL, name = "-p", description = "Password to connect with")
+        @Option(type = OptionType.GLOBAL, name = "-P", description = "Password to connect with")
         public String password;
 
-        @Option(type = OptionType.GLOBAL, name = "-h", description = "Jira URL")
+        @Option(type = OptionType.GLOBAL, name = "-H", description = "Jira URL")
         public String url;
 
         private Properties propertiesCache = null;
 
-        public JiraRestClient getClient() {
-            try {
-                JerseyJiraRestClientFactory factory = new JerseyJiraRestClientFactory();
-                URI jiraServerUri = new URI(withDefault("url", this.url, DEFAULT_URL));
-                return factory.create(jiraServerUri, getAuthHandler(jiraServerUri));
-            } catch (URISyntaxException e) {
-                throw new RuntimeException(e);
-            }
+        public JiraClient getClient() {
+            return new JiraClient(withDefault("url", url, DEFAULT_URL, true),
+                    withDefault("user", user, DEFAULT_USER, true),
+                    withDefault("password", password, null, true));
         }
 
-        private AuthenticationHandler getAuthHandler(URI uri) {
-            String password = withDefault("password", this.password, null);
-            if (password == null) {
-                System.err.println(format("Connecting anonymously to %s", uri));
-                return new AnonymousAuthenticationHandler();
-            } else {
-                String user = withDefault("user", this.user, DEFAULT_USER);
-                System.err.println(format("Connecting to %s as %s", uri, user));
-                return new BasicHttpAuthenticationHandler(user, password);
-            }
-        }
-
-        private String withDefault(final String key, final String value, final String deflt) {
+        final String withDefault(final String key, final String value, final String deflt, boolean nullOk) {
             String result = value;
             if (result == null) {
                 Properties properties = getProperties();
@@ -89,6 +66,9 @@ public class CmdLine {
             }
             if (result == null) {
                 result = deflt;
+            }
+            if (result == null && !nullOk) {
+                throw new MissingArgumentException(key);
             }
             return result;
         }
@@ -117,33 +97,87 @@ public class CmdLine {
 
     }
 
-    @Command(name="add-user", description="Add a Jenkins user to Jira")
-    public static class CreateUser extends Connection implements Runnable {
-
-        public void run() {
-            System.out.println("create user");
-        }
-
-    }
-
     @Command(name="list-projects", description="List Jira projects")
     public static class ListProjects extends Connection implements Runnable {
 
         public void run() {
-            JiraRestClient client = getClient();
-            for (BasicProject project : client.getProjectClient().getAllProjects(new NullProgressMonitor())) {
-                System.out.println(project.getName());
+            JiraClient client = getClient();
+            try {
+                for (BasicProject project : client.listProjects()) {
+                    System.out.println(format("%s: %s", project.getKey(), project.getName()));
+                }
+            } finally {
+                client.close();
             }
         }
 
     }
 
-    private static class NullProgressMonitor implements ProgressMonitor {}
+    @Command(name="list-issue-types", description="List Jira projects")
+    public static class ListIssueTypes extends Connection implements Runnable {
+
+        @Option(name = "-p", description = "Project ID")
+        public String project;
+
+        public void run() {
+            JiraClient client = getClient();
+            try {
+                for (CimIssueType type : client.listIssueTypes(withDefault("project", project, DEFAULT_PROJECT, true))) {
+                    System.out.println(type.getName());
+                }
+            } finally {
+                client.close();
+            }
+        }
+
+    }
+
+    @Command(name="create-issue", description="List Jira projects")
+    public static class CreateIssue extends Connection implements Runnable {
+
+        @Option(name = "-p", description = "Project ID")
+        public String project;
+
+        @Option(name = "-t", description = "Issue type")
+        public String type;
+
+        @Option(name = "-s", description = "Summary")
+        public String summary;
+
+        @Option(name = "-d", description = "Description")
+        public String description;
+
+        public void run() {
+            JiraClient client = getClient();
+            try {
+                client.createIssue(
+                        withDefault("project", project, DEFAULT_PROJECT, true),
+                        withDefault("issueType", type, null, false),
+                        withDefault("summary", summary, null, false),
+                        withDefault("description", description, null, false));
+            } finally {
+                client.close();
+            }
+        }
+
+    }
 
     private static boolean handleException(Throwable e) {
         // overloading is static resolution
         if (e instanceof UniformInterfaceException && handleException((UniformInterfaceException)e)) return true;
+        if (e instanceof MissingArgumentException && handleException((MissingArgumentException)e)) return true;
+        if (e instanceof MessageException && handleException((MessageException)e)) return true;
         return e.getCause() != null && handleException(e.getCause());
+    }
+
+    private static boolean handleException(MissingArgumentException e) {
+        System.err.println(format("%s is required", e.getMessage()));
+        return true;
+    }
+
+    private static boolean handleException(MessageException e) {
+        System.err.println(e.getMessage());
+        return true;
     }
 
     private static boolean handleException(UniformInterfaceException e) {
@@ -161,6 +195,10 @@ public class CmdLine {
             }
         }
         return e.getCause() != null && handleException(e.getCause());
+    }
+
+    private static class MissingArgumentException extends RuntimeException{
+        public MissingArgumentException(final String key) {super(key);}
     }
 
 }

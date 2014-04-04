@@ -5,8 +5,8 @@ if [ `basename $PWD` != "JiraTestResultReporter" ]; then
     exit 1
 fi
 
+./src/main/bash/compile-plugin.sh
 # https://wiki.jenkins-ci.org/display/JENKINS/Plugin+tutorial
-mvn install
 sudo service jenkins stop
 sudo cp target/JiraTestResultReporter.hpi /var/lib/jenkins/plugins/
 sudo rm -fr  /var/lib/jenkins/plugins/JiraTestResultReporter
