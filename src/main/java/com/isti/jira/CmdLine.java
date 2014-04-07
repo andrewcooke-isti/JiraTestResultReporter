@@ -6,21 +6,19 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import io.airlift.command.*;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.Properties;
 
 import static java.lang.String.format;
 
 
+/**
+ * A command line interface to the functionality exposed in JiraClient.  This allows testing and exploration at
+ * the command line (debugging a plugin from within Jenkins is not much fun).
+ *
+ * The general interface is something like git, with various commands as parameters.  Use the -h option
+ * to display the help text.
+ */
 public class CmdLine {
-
-    private static final String DOT_FILE = ".catsjira";
-
-    private static final String DEFAULT_USER = "CATS";
-    private static final String DEFAULT_URL = "http://localhost:8081";
-    private static final String DEFAULT_PROJECT = "CATS";
 
     public static void main(String[] args) {
         Cli.CliBuilder<Runnable> builder = Cli.<Runnable>builder("CmdLine")
@@ -50,49 +48,8 @@ public class CmdLine {
         @Option(type = OptionType.GLOBAL, name = "-H", description = "Jira URL")
         public String url;
 
-        private Properties propertiesCache = null;
-
         public JiraClient getClient() {
-            return new JiraClient(withDefault("url", url, DEFAULT_URL, true),
-                    withDefault("user", user, DEFAULT_USER, true),
-                    withDefault("password", password, null, true));
-        }
-
-        final String withDefault(final String key, final String value, final String deflt, boolean nullOk) {
-            String result = value;
-            if (result == null) {
-                Properties properties = getProperties();
-                result = properties.getProperty(key);
-            }
-            if (result == null) {
-                result = deflt;
-            }
-            if (result == null && !nullOk) {
-                throw new MissingArgumentException(key);
-            }
-            return result;
-        }
-
-        private synchronized Properties getProperties() {
-            if (propertiesCache == null) {
-                propertiesCache = new Properties();
-                loadPropertiesFrom("/var/lib/jenkins");
-                loadPropertiesFrom(System.getProperty("home.user"));
-            }
-            return propertiesCache;
-        }
-
-        private void loadPropertiesFrom(final String dir) {
-            if (dir == null) return;
-            String path = dir + "/" + DOT_FILE;
-            File file = new File(path);
-            if (file.exists() && file.isFile() && file.canRead()) {
-                try {
-                    propertiesCache.load(new FileReader(file));
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
+            return new JiraClient(url, user, password);
         }
 
     }
@@ -122,7 +79,7 @@ public class CmdLine {
         public void run() {
             JiraClient client = getClient();
             try {
-                for (CimIssueType type : client.listIssueTypes(withDefault("project", project, DEFAULT_PROJECT, true))) {
+                for (CimIssueType type : client.listIssueTypes(project)) {
                     System.out.println(type.getName());
                 }
             } finally {
@@ -150,11 +107,7 @@ public class CmdLine {
         public void run() {
             JiraClient client = getClient();
             try {
-                client.createIssue(
-                        withDefault("project", project, DEFAULT_PROJECT, true),
-                        withDefault("issueType", type, null, false),
-                        withDefault("summary", summary, null, false),
-                        withDefault("description", description, null, false));
+                client.createIssue(project, type, summary, description);
             } finally {
                 client.close();
             }
@@ -195,10 +148,6 @@ public class CmdLine {
             }
         }
         return e.getCause() != null && handleException(e.getCause());
-    }
-
-    private static class MissingArgumentException extends RuntimeException{
-        public MissingArgumentException(final String key) {super(key);}
     }
 
 }

@@ -1,11 +1,12 @@
 package JiraTestResultReporter;
 
-import hudson.Launcher;
+import com.isti.jira.JiraClient;
 import hudson.Extension;
 import hudson.FilePath;
+import hudson.Launcher;
 import hudson.model.AbstractBuild;
-import hudson.model.BuildListener;
 import hudson.model.AbstractProject;
+import hudson.model.BuildListener;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
@@ -16,28 +17,18 @@ import hudson.util.FormValidation;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.auth.AuthenticationException;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.Credentials;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.auth.BasicScheme;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.impl.client.AbstractHttpClient;
-
-import java.io.IOException;
 import java.io.PrintStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 
+import static java.lang.String.format;
+
 
 public class JiraReporter extends Notifier {
 
     public String projectKey;
-    public String serverAddress;
+    public String serverUrl;
     public String username;
     public String password;
 
@@ -47,35 +38,29 @@ public class JiraReporter extends Notifier {
 
     private FilePath workspace;
 
-    private static final int JIRA_SUCCESS_CODE = 201;
-
     private static final String PluginName = "[JiraTestResultReporter]";
-    private final String pInfo = String.format("%s [INFO]", PluginName);
-    private final String pDebug = String.format("%s [DEBUG]", PluginName);
-    private final String pVerbose = String.format("%s [DEBUGVERBOSE]", PluginName);
-    private final String prefixError = String.format("%s [ERROR]", PluginName);
+    private final String pInfo = format("%s [INFO]", PluginName);
+    private final String pDebug = format("%s [DEBUG]", PluginName);
+    private final String pVerbose = format("%s [DEBUGVERBOSE]", PluginName);
+    private final String prefixError = format("%s [ERROR]", PluginName);
 
     @DataBoundConstructor
     public JiraReporter(String projectKey,
-                        String serverAddress,
+                        String serverUrl,
                         String username,
                         String password,
                         boolean createAllFlag,
                         boolean debugFlag,
                         boolean verboseDebugFlag) {
-        if (serverAddress.endsWith("/")) {
-            this.serverAddress = serverAddress;
-        } else {
-            this.serverAddress = serverAddress + "/";
-        }
 
         this.projectKey = projectKey;
+        this.serverUrl = serverUrl;
         this.username = username;
         this.password = password;
 
         this.verboseDebugFlag = verboseDebugFlag;
         this.debugFlag = verboseDebugFlag || debugFlag;
-        
+
         this.createAllFlag = createAllFlag;
     }
 
@@ -87,22 +72,25 @@ public class JiraReporter extends Notifier {
     public boolean perform(final AbstractBuild build,
                            final Launcher launcher,
                            final BuildListener listener) {
+
         PrintStream logger = listener.getLogger();
         logger.printf("%s Examining test results...%n", pInfo);
+
         debugLog(listener,
-                 String.format("Build result is %s%n",
-                    build.getResult().toString())
-                );
+                format("Build result is %s%n",
+                        build.getResult().toString())
+        );
+
         this.workspace = build.getWorkspace();
         debugLog(listener,
-                 String.format("%s Workspace is %s%n", pInfo, this.workspace.toString())
-                );
-//      if (build.getResult() == Result.UNSTABLE) {
-            AbstractTestResultAction<?> testResultAction = build.getTestResultAction();
-            List<CaseResult> failedTests = testResultAction.getFailedTests();
-            printResultItems(failedTests, listener);
-            createJiraIssue(failedTests, listener);
-//      }
+                format("%s Workspace is %s%n", pInfo, this.workspace.toString())
+        );
+
+        AbstractTestResultAction<?> testResultAction = build.getTestResultAction();
+        List<CaseResult> failedTests = testResultAction.getFailedTests();
+        printResultItems(failedTests, listener);
+        createJiraIssue(failedTests, listener);
+
         logger.printf("%s Done.%n", pInfo);
         return true;
     }
@@ -141,55 +129,31 @@ public class JiraReporter extends Notifier {
         logger.printf("%s %s%n", pDebug, message);
     }
 
-     void createJiraIssue(final List<CaseResult> failedTests,
-                          final BuildListener listener) {
+    void createJiraIssue(final List<CaseResult> failedTests,
+                         final BuildListener listener) {
         PrintStream logger = listener.getLogger();
-        String url = this.serverAddress + "rest/api/2/issue/";
 
         for (CaseResult result : failedTests) {
             if ((result.getAge() == 1) || (this.createAllFlag)) {
-//          if (result.getAge() > 0) {
                 debugLog(listener,
-                         String.format("Creating issue in project %s at URL %s%n",
-                            this.projectKey, url)
-                        );
+                        format("Creating issue in project %s at URL %s%n",
+                                this.projectKey, this.serverUrl)
+                );
+
+                // create each time since it's not clear how to close on Jenkins shutdown
+                // (and the overhead once per test isn't an issue anyway).
+                JiraClient client = new JiraClient(this.serverUrl, this.username, this.password);
                 try {
-                    DefaultHttpClient httpClient = new DefaultHttpClient();
-                    Credentials creds = new UsernamePasswordCredentials(this.username, this.password);
-                    ((AbstractHttpClient) httpClient).getCredentialsProvider().setCredentials(AuthScope.ANY, creds);
-
-                    HttpPost postRequest = new HttpPost(url);
-                    String jsonPayLoad = "{\"fields\": {\"project\": {\"key\": \"" + this.projectKey + "\"},\"summary\": \"The test " + result.getName() + " failed " + result.getClassName() + ": " + result.getErrorDetails() + "\",\"description\": \"Test class: " + result.getClassName() + " -- " + result.getErrorStackTrace().replace(this.workspace.toString(), "") + "\",\"issuetype\": {\"name\": \"Bug\"}}}";
-//                     logger.printf("%s JSON payload: %n", pVerbose, jsonPayLoad);
-                    logger.printf("%s Reporting issue.%n", pInfo);
-                    StringEntity params = new StringEntity(jsonPayLoad);
-                    params.setContentType("application/json");
-                    postRequest.setEntity(params);
-                    try {
-                        postRequest.addHeader(new BasicScheme().authenticate(new UsernamePasswordCredentials(this.username, this.password), postRequest));
-                    } catch (AuthenticationException a) {
-                        a.printStackTrace();
-                    }
-
-                    HttpResponse response = httpClient.execute(postRequest);
-                    debugLog(listener,
-                             String.format("statusLine: %s%n",
-                                response.getStatusLine())
-                            );
-                    debugLog(listener,
-                             String.format("statusCode: %d%n",
-                                response.getStatusLine().getStatusCode())
-                            );
-                    if (response.getStatusLine().getStatusCode() != JIRA_SUCCESS_CODE) {
-                        throw new RuntimeException(this.prefixError + " Failed : HTTP error code : " + response.getStatusLine().getStatusCode());
-                    }
-
-                    httpClient.getConnectionManager().shutdown();
-                } catch (MalformedURLException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
+                    String summary = format("The test %s failed %s: %s",
+                            result.getName(), result.getClassName(), result.getErrorDetails());
+                    String description = format("Test class: %s -- %s",
+                            result.getClassName(),
+                            result.getErrorStackTrace().replace(this.workspace.toString(), ""));
+                    client.createIssue(this.projectKey, null, summary, description);
+                } finally {
+                    client.close();
                 }
+
             } else {
                 logger.printf("%s This issue is old; not reporting.%n", pInfo);
             }
@@ -213,27 +177,27 @@ public class JiraReporter extends Notifier {
         public String getDisplayName() {
             return "Jira Test Result Reporter";
         }
-        
+
         public FormValidation doCheckProjectKey(@QueryParameter String value) {
-        	if (value.isEmpty()) {
-        		return FormValidation.error("You must provide a project key.");
-        	} else {
-        		return FormValidation.ok();
-        	}
+            if (value.isEmpty()) {
+                return FormValidation.error("You must provide a project key.");
+            } else {
+                return FormValidation.ok();
+            }
         }
 
         public FormValidation doCheckServerAddress(@QueryParameter String value) {
-        	if (value.isEmpty()) {
-        		return FormValidation.error("You must provide an URL.");
-        	}
-        	
-        	try {
-        		new URL(value);
-        	} catch (final MalformedURLException e) {
-        		return FormValidation.error("This is not a valid URL.");
-        	}
-        	
-        	return FormValidation.ok();
+            if (value.isEmpty()) {
+                return FormValidation.error("You must provide an URL.");
+            }
+
+            try {
+                new URL(value);
+            } catch (final MalformedURLException e) {
+                return FormValidation.error("This is not a valid URL.");
+            }
+
+            return FormValidation.ok();
         }
     }
 
