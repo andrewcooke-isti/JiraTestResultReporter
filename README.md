@@ -26,7 +26,7 @@ The changes to the original include:
 ```
 [cats@localhost jira-plugin]$ ./cmd-line-target.sh help create-issue
 NAME
-        CmdLine create-issue - List Jira projects
+        CmdLine create-issue - Create a new issue
 
 SYNOPSIS
         CmdLine [-H <url>] [-P <password>] [-U <user>] create-issue
@@ -69,6 +69,8 @@ password=secret
 url=http://localhost:8081
 issue_type=bug
 ```
+
+## Planned Work
 
 Future changes should include:
 
