@@ -78,7 +78,7 @@ public class CmdLine {
 
     }
 
-    @Command(name="list-issue-types", description="List Jira projects")
+    @Command(name="list-issue-types", description="List issue types for a project")
     public static class ListIssueTypes extends Connection implements Runnable {
 
         @Option(name = "-p", description = "Project ID")
@@ -97,7 +97,7 @@ public class CmdLine {
 
     }
 
-    @Command(name="create-issue", description="List Jira projects")
+    @Command(name="create-issue", description="Create a new issue")
     public static class CreateIssue extends Connection implements Runnable {
 
         @Option(name = "-p", description = "Project ID")

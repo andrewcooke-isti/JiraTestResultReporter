@@ -30,7 +30,10 @@ import static org.apache.commons.lang.StringUtils.isEmpty;
 
 public class JiraReporter extends Notifier {
 
+    // do these have to be public for the plugin to work?
+
     public String projectKey;
+    public String issueType;
     public String serverUrl;
     public String username;
     public String password;
@@ -47,8 +50,10 @@ public class JiraReporter extends Notifier {
     private final String pVerbose = format("%s [DEBUGVERBOSE]", PluginName);
     private final String prefixError = format("%s [ERROR]", PluginName);
 
+
     @DataBoundConstructor
     public JiraReporter(String projectKey,
+                        String issueType,
                         String serverUrl,
                         String username,
                         String password,
@@ -57,6 +62,7 @@ public class JiraReporter extends Notifier {
                         boolean verboseDebugFlag) {
 
         this.projectKey = projectKey;
+        this.issueType = issueType;
         this.serverUrl = serverUrl;
         this.username = username;
         this.password = password;
@@ -186,7 +192,16 @@ public class JiraReporter extends Notifier {
         public FormValidation doCheckProjectKey(@QueryParameter String value) {
             value = DEFAULTS.withDefault(Key.project, value, true);
             if (isEmpty(value)) {
-                return FormValidation.error("You must provide a project key.");
+                return FormValidation.error("You must provide a project key (here or in the defaults file).");
+            } else {
+                return FormValidation.ok();
+            }
+        }
+
+        public FormValidation doCheckIssueType(@QueryParameter String value) {
+            value = DEFAULTS.withDefault(Key.issue_type, value, true);
+            if (isEmpty(value)) {
+                return FormValidation.error("You must provide an issue type (here or in the defaults file).");
             } else {
                 return FormValidation.ok();
             }
@@ -195,7 +210,7 @@ public class JiraReporter extends Notifier {
         public FormValidation doCheckServerAddress(@QueryParameter String value) {
             value = DEFAULTS.withDefault(Key.url, value, true);
             if (isEmpty(value)) {
-                return FormValidation.error("You must provide an URL.");
+                return FormValidation.error("You must provide a URL (here or in the defaults file).");
             }
 
             try {

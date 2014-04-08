@@ -2,6 +2,9 @@
   <f:entry title="Jira Project Key" field="projectKey">
     <f:textbox field="projectKey" />
   </f:entry>
+  <f:entry title="Jira Issue Type" field="issueType">
+    <f:textbox field="issueType" />
+  </f:entry>
   <f:entry title="Server Address" field="serverAddress">
     <f:textbox field="serverAddress"/>
   </f:entry>
