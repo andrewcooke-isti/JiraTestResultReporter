@@ -6,6 +6,8 @@ JiraTestResultReporter](https://github.com/maplesteve/JiraTestResultReporter)
 (MIT Licenced) which we hope to get running with recent Jira using the
 [JRJC](https://ecosystem.atlassian.net/wiki/display/JRJC/Home).
 
+## Features
+
 The changes to the original include:
 
 * The plugin actually works with the latest Jenkins and Jira (April
