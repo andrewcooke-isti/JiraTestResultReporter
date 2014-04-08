@@ -70,6 +70,25 @@ url=http://localhost:8081
 issue_type=bug
 ```
 
+## Configuration
+
+* Compile and install the plugin as normal (or see the scripts in
+  `src/main/bash`).
+
+* Optionally, add `.catsjira` to `/var/lib/jenkins` with defaults.
+
+* Use command line tool to check that projects and issue types can be
+  listed.
+
+* Configure the plugin for a particular test (it's added as a
+  post-build step) from the usual drop-down menu.
+
+* Initially, select "Create issue for all errors" and run the test
+  once (if you have current errors that you want to report).
+
+* Disable "Create issue for all errors" so that only new errors are
+  reported on subsequent runs.
+
 ## Planned Work
 
 Future changes should include:
