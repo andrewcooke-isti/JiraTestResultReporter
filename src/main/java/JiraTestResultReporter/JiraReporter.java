@@ -1,5 +1,6 @@
 package JiraTestResultReporter;
 
+import com.isti.jira.Defaults;
 import com.isti.jira.JiraClient;
 import hudson.Extension;
 import hudson.FilePath;
@@ -23,6 +24,8 @@ import java.net.URL;
 import java.util.List;
 
 import static java.lang.String.format;
+import static com.isti.jira.Defaults.Key;
+import static org.apache.commons.lang.StringUtils.isEmpty;
 
 
 public class JiraReporter extends Notifier {
@@ -168,6 +171,8 @@ public class JiraReporter extends Notifier {
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Publisher> {
 
+        private static Defaults DEFAULTS = new Defaults();
+
         @Override
         public boolean isApplicable(final Class<? extends AbstractProject> jobType) {
             return true;
@@ -179,7 +184,8 @@ public class JiraReporter extends Notifier {
         }
 
         public FormValidation doCheckProjectKey(@QueryParameter String value) {
-            if (value.isEmpty()) {
+            value = DEFAULTS.withDefault(Key.project, value, true);
+            if (isEmpty(value)) {
                 return FormValidation.error("You must provide a project key.");
             } else {
                 return FormValidation.ok();
@@ -187,7 +193,8 @@ public class JiraReporter extends Notifier {
         }
 
         public FormValidation doCheckServerAddress(@QueryParameter String value) {
-            if (value.isEmpty()) {
+            value = DEFAULTS.withDefault(Key.url, value, true);
+            if (isEmpty(value)) {
                 return FormValidation.error("You must provide an URL.");
             }
 

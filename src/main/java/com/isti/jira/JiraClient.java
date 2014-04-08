@@ -19,6 +19,8 @@ import java.util.Iterator;
 
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
+import static com.isti.jira.Defaults.Key;
+
 
 /**
  * High level wrapper for Jira's own client.  This blocks on actions and throws RumtimeException on error.
@@ -31,9 +33,6 @@ import static java.util.Collections.singletonList;
 public class JiraClient {
 
     private static final Defaults DEFAULTS = new Defaults();
-    private static final String DEFAULT_USER = "CATS";
-    private static final String DEFAULT_URL = "http://localhost:8081";
-    private static final String DEFAULT_PROJECT = "CATS";
 
     private JiraRestClient client;
 
@@ -50,11 +49,11 @@ public class JiraClient {
     private static JiraRestClient getClient(final String url, final String user, final String password) {
         try {
             AsynchronousJiraRestClientFactory factory = new AsynchronousJiraRestClientFactory();
-            URI jiraServerUri = new URI(DEFAULTS.withDefault("url", url, DEFAULT_URL));
+            URI jiraServerUri = new URI(DEFAULTS.withDefault(Key.url, url));
             return factory.create(jiraServerUri, getAuthHandler(
                     jiraServerUri,
-                    DEFAULTS.withDefault("user", user, DEFAULT_USER),
-                    DEFAULTS.withDefault("password", password, null, true)));
+                    DEFAULTS.withDefault(Key.user, user),
+                    DEFAULTS.withDefault(Key.password, password, true)));
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
@@ -83,7 +82,7 @@ public class JiraClient {
     }
 
     public Iterable<CimIssueType> listIssueTypes(final String project) {
-        String p = DEFAULTS.withDefault("project", project, DEFAULT_PROJECT);
+        String p = DEFAULTS.withDefault(Key.project, project);
         Iterator<CimProject> info = client.getIssueClient().getCreateIssueMetadata(
                 new GetCreateIssueMetadataOptions(null, null, null, singletonList(p), null)).claim().iterator();
         if (info.hasNext()) {
@@ -94,7 +93,7 @@ public class JiraClient {
     }
 
     private CimIssueType matchIssue(String issueType, Iterable<CimIssueType> types) {
-        String type = DEFAULTS.withDefault("issueType", issueType, null, false);
+        String type = DEFAULTS.withDefault(Key.issue_type, issueType);
         for (CimIssueType issue : types) {
             if (issue.getName().equalsIgnoreCase(type)) {
                 return issue;
@@ -107,9 +106,9 @@ public class JiraClient {
                             final String summary, final String description) {
         IssueType type = matchIssue(issueType, listIssueTypes(project));
         IssueInputBuilder issueBuilder =
-                new IssueInputBuilder(DEFAULTS.withDefault("project", project, DEFAULT_PROJECT), type.getId());
-        issueBuilder.setSummary(DEFAULTS.withDefault("summary", summary, null));
-        issueBuilder.setDescription(DEFAULTS.withDefault("description", description, null));
+                new IssueInputBuilder(DEFAULTS.withDefault(Key.project, project), type.getId());
+        issueBuilder.setSummary(DEFAULTS.withDefault(Key.summary, summary));
+        issueBuilder.setDescription(DEFAULTS.withDefault(Key.description, description));
         client.getIssueClient().createIssue(issueBuilder.build()).claim();
     }
 

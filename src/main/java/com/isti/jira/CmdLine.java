@@ -6,8 +6,6 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import io.airlift.command.*;
 
-import java.util.Properties;
-
 import static java.lang.String.format;
 
 
@@ -24,7 +22,8 @@ public class CmdLine {
         Cli.CliBuilder<Runnable> builder = Cli.<Runnable>builder("CmdLine")
                 .withDescription("Command line tool for Jira")
                 .withDefaultCommand(Help.class)
-                .withCommands(Help.class, ListProjects.class, ListIssueTypes.class, CreateIssue.class);
+                .withCommands(Help.class, ListDefaults.class, ListProjects.class, ListIssueTypes.class,
+                        CreateIssue.class);
         Cli<Runnable> parser = builder.build();
         try {
             parser.parse(args).run();
@@ -50,6 +49,15 @@ public class CmdLine {
 
         public JiraClient getClient() {
             return new JiraClient(url, user, password);
+        }
+
+    }
+
+    @Command(name="list-defaults", description="List default settings")
+    public static class ListDefaults implements Runnable {
+
+        public void run() {
+            new Defaults().listTo(System.err);
         }
 
     }
