@@ -70,7 +70,7 @@ url=http://localhost:8081
 issue_type=bug
 ```
 
-## Configuration
+## Installation
 
 * Compile and install the plugin as normal (or see the scripts in
   `src/main/bash`).
