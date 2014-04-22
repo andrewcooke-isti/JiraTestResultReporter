@@ -6,6 +6,11 @@ package com.isti.jira;
  */
 public class MessageException extends RuntimeException {
 
-    public MessageException(String msg) {super(msg);}
+    /**
+     * @param msg The message to display to the user.
+     */
+    public MessageException(final String msg) {
+        super(msg);
+    }
 
 }

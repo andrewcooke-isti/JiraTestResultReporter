@@ -1,9 +1,9 @@
 package JiraTestResultReporter;
 
+import com.atlassian.jira.rest.client.api.domain.Issue;
 import com.isti.jira.Defaults;
 import com.isti.jira.JiraClient;
 import hudson.Extension;
-import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
@@ -21,56 +21,57 @@ import org.kohsuke.stapler.QueryParameter;
 import java.io.PrintStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-import static java.lang.String.format;
 import static com.isti.jira.Defaults.Key;
+import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isEmpty;
 
 
-public class JiraReporter extends Notifier {
+/**
+ * The main plugin class.
+ *
+ * This is forked from previous work by mapleSteve, which was a big help (thanks!), but makes checkstyle unhappy.
+ */
+public final class JiraReporter extends Notifier {
 
-    // do these have to be public for the plugin to work?
-
+    // THESE MUST BE PUBLIC OR THE PLUGIN DOESN'T WORK (field values read from here afaict)
     public String projectKey;
     public String issueType;
     public String serverUrl;
     public String username;
     public String password;
-
-    public boolean debugFlag;
-    public boolean verboseDebugFlag;
+    public String transition;
     public boolean createAllFlag;
+    public boolean debugFlag;
 
-    private FilePath workspace;
-
-    private static final String PluginName = "[JiraTestResultReporter]";
-    private final String pInfo = format("%s [INFO]", PluginName);
-    private final String pDebug = format("%s [DEBUG]", PluginName);
-    private final String pVerbose = format("%s [DEBUGVERBOSE]", PluginName);
-    private final String prefixError = format("%s [ERROR]", PluginName);
+    private static final String PLUGIN_NAME = "[JiraTestResultReporter]";
+    private final String pInfo = format("%s [INFO]", PLUGIN_NAME);
+    private final String pDebug = format("%s [DEBUG]", PLUGIN_NAME);
 
 
+    // THESE ARGUMENTS MUST MATCH THE ATTRIBUTE NAMES OR THE PLUGIN DOESN'T WORK (field values set by name afaict)
     @DataBoundConstructor
-    public JiraReporter(String projectKey,
-                        String issueType,
-                        String serverUrl,
-                        String username,
-                        String password,
-                        boolean createAllFlag,
-                        boolean debugFlag,
-                        boolean verboseDebugFlag) {
+    public JiraReporter(final String projectKey,
+                        final String issueType,
+                        final String serverUrl,
+                        final String username,
+                        final String password,
+                        final String transition,
+                        final boolean createAllFlag,
+                        final boolean debugFlag) {
 
         this.projectKey = projectKey;
         this.issueType = issueType;
         this.serverUrl = serverUrl;
         this.username = username;
         this.password = password;
-
-        this.verboseDebugFlag = verboseDebugFlag;
-        this.debugFlag = verboseDebugFlag || debugFlag;
-
+        this.transition = transition;
         this.createAllFlag = createAllFlag;
+        this.debugFlag = debugFlag;
+
     }
 
     public BuildStepMonitor getRequiredMonitorService() {
@@ -90,21 +91,29 @@ public class JiraReporter extends Notifier {
                         build.getResult().toString())
         );
 
-        this.workspace = build.getWorkspace();
-        debugLog(listener,
-                format("%s Workspace is %s%n", pInfo, this.workspace.toString())
-        );
-
+        String workspace = build.getWorkspace().toString();
+        String tag = jenkinsProjectTag(build.getProject().getName());
         AbstractTestResultAction<?> testResultAction = build.getTestResultAction();
         List<CaseResult> failedTests = testResultAction.getFailedTests();
-        printResultItems(failedTests, listener);
-        createJiraIssue(failedTests, listener);
+
+        printResultItems(failedTests, workspace, listener);
+        // create each time since it's not clear how to close on Jenkins shutdown
+        // (and the overhead once per test isn't an issue anyway).
+        JiraClient client = new JiraClient(serverUrl, username, password);
+        try {
+            Iterable<Issue> existingIssues = client.listUnresolvedIssues(projectKey, issueType);
+            createJiraIssues(failedTests, existingIssues, tag, workspace, listener, client);
+            closeJiraIssues(failedTests, existingIssues, tag, listener, client);
+        } finally {
+            client.close();
+        }
 
         logger.printf("%s Done.%n", pInfo);
         return true;
     }
 
     private void printResultItems(final List<CaseResult> failedTests,
+                                  final String workspace,
                                   final BuildListener listener) {
         if (!this.debugFlag) {
             return;
@@ -124,7 +133,7 @@ public class JiraReporter extends Notifier {
             out.printf("%s age: %s%n", pDebug, result.getAge());
             out.printf("%s ErrorStackTrace: %s%n", pDebug, result.getErrorStackTrace());
 
-            String affectedFile = result.getErrorStackTrace().replace(this.workspace.toString(), "");
+            String affectedFile = result.getErrorStackTrace().replace(workspace, "");
             out.printf("%s affectedFile: %s%n", pDebug, affectedFile);
             out.printf("%s ----------------------------%n", pDebug);
         }
@@ -138,33 +147,84 @@ public class JiraReporter extends Notifier {
         logger.printf("%s %s%n", pDebug, message);
     }
 
-    void createJiraIssue(final List<CaseResult> failedTests,
-                         final BuildListener listener) {
+    /**
+     * @param jenkinsProjectName The (Jenkins) project name.
+     * @return A prefix used to identify issues belonging to this project.
+     */
+    private String jenkinsProjectTag(final String jenkinsProjectName) {
+        return format("[Jenkins: %s]", jenkinsProjectName);
+    }
+
+    /**
+     * Generate a summary of the test (important because it's how we identify tests later).
+     *
+     * @param tag The tag used to identify this Jenkins project..
+     * @param failedTest The failing test.
+     * @return A summary used to identify the test.
+     */
+    private String summarize(final String tag, final CaseResult failedTest) {
+        return format("Test %s failed in %s %s", failedTest.getName(), failedTest.getClassName(), tag);
+    }
+
+    void createJiraIssues(final List<CaseResult> failedTests,
+                          final Iterable<Issue> existingIssues,
+                          final String tag,
+                          final String workspace,
+                          final BuildListener listener,
+                          final JiraClient client) {
         PrintStream logger = listener.getLogger();
 
+        Set<String> known = new HashSet<String>();
+        for (Issue issue: existingIssues) {
+            known.add(issue.getSummary());
+        }
+
         for (CaseResult result : failedTests) {
-            if ((result.getAge() == 1) || (this.createAllFlag)) {
+            String summary = summarize(tag, result);
+
+            if (known.contains(summary)) {
+                logger.printf("%s Jira already contains \"%s\".%n", pInfo, summary);
+
+            } else if ((result.getAge() == 1) || (this.createAllFlag)) {
                 debugLog(listener,
                         format("Creating issue in project %s at URL %s%n",
                                 this.projectKey, this.serverUrl)
                 );
-
-                // create each time since it's not clear how to close on Jenkins shutdown
-                // (and the overhead once per test isn't an issue anyway).
-                JiraClient client = new JiraClient(this.serverUrl, this.username, this.password);
-                try {
-                    String summary = format("The test %s failed %s: %s",
-                            result.getName(), result.getClassName(), result.getErrorDetails());
-                    String description = format("Test class: %s -- %s",
-                            result.getClassName(),
-                            result.getErrorStackTrace().replace(this.workspace.toString(), ""));
-                    client.createIssue(this.projectKey, null, summary, description);
-                } finally {
-                    client.close();
-                }
+                String description = format("%s\nClass: %s\nTrace: %s",
+                        result.getErrorDetails(),
+                        result.getClassName(),
+                        result.getErrorStackTrace().replace(workspace, ""));
+                client.createIssue(projectKey, issueType, summary, description);
 
             } else {
                 logger.printf("%s This issue is old; not reporting.%n", pInfo);
+            }
+        }
+    }
+
+    void closeJiraIssues(final List<CaseResult> failedTests,
+                         final Iterable<Issue> existingIssues,
+                         final String tag,
+                         final BuildListener listener,
+                         final JiraClient client) {
+
+        PrintStream logger = listener.getLogger();
+
+        Set<String> known = new HashSet<String>();
+        for (CaseResult result: failedTests) {
+            known.add(summarize(tag, result));
+        }
+
+        // run through the open issues and see which are no longer present
+        for (Issue issue: existingIssues) {
+            String summary = issue.getSummary();
+            if (summary.contains(tag)) {
+                if (known.contains(summary)) {
+                    logger.printf("%s Still open: %s%n", pInfo, summary);
+                } else {
+                    client.closeIssue(issue, transition);
+                    logger.printf("%s Closed: %s%n", pInfo, summary);
+                }
             }
         }
     }
@@ -221,6 +281,16 @@ public class JiraReporter extends Notifier {
 
             return FormValidation.ok();
         }
+
+        public FormValidation doCheckTransition(@QueryParameter String transition) {
+            transition = DEFAULTS.withDefault(Key.transition, transition, true);
+            if (isEmpty(transition)) {
+                return FormValidation.error("You must provide a transition (here or in the defaults file).");
+            } else {
+                return FormValidation.ok();
+            }
+        }
+
     }
 
 }

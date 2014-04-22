@@ -14,6 +14,9 @@ import static org.apache.commons.lang.StringUtils.isEmpty;
  */
 public class Defaults {
 
+    /**
+     * The name of the file that contains the defaults.
+     */
     private static final String DOT_FILE = ".catsjira";
 
     /**
@@ -22,29 +25,62 @@ public class Defaults {
     public static enum Key {
 
         // lower case because name used in properties
-        user("cats"),
-        password,
-        url("http://localhost:80801"),
-        project,
-        issue_type("bug"),
-        summary,
-        description;
 
+        /** The user to use in a connection. */
+        user("cats"),
+        /** The password to use in a connection. */
+        password,
+        /** The URL to connect to. */
+        url("http://localhost:80801"),
+        /** The project to create issues for (usually not supplied). */
+        project,
+        /** The ussue type to create. */
+        issue_type("bug"),
+        /** A summary of the issue (usually not supplied). */
+        summary,
+        /** A description of the issue (usually not supplied). */
+        description,
+        /** The transition needed to resolve the issue. */
+        transition("done");
+
+        /**
+         * The default value (may be null, eg in the case of password).
+         */
         private final String deflt;
 
-        Key(final String deflt) {
-            this.deflt = deflt;
+        /**
+         * Create a key witha default.
+         *
+         * @param theDeflt The default value if non supplied.
+         */
+        Key(final String theDeflt) {
+            deflt = theDeflt;
         }
 
+        /**
+         * Create a key without a default value.
+         */
         Key() {
             this(null);
         }
-        
+
     }
 
+    /**
+     * A cache for the properties, so we don't need to read it each time.
+     */
     private Properties propertiesCache = null;
 
-    public final String withDefault(final Key key, final String value, boolean nullOk) {
+    /**
+     * Process a value, replacing null with any defaults found, and then raising an exception if still null when
+     * nullOk is false.
+     *
+     * @param key The name of the value.
+     * @param value The initial value (may be null).
+     * @param nullOk If true then a final null value does not raise an exception.
+     * @return A value with defaults applied.
+     */
+    public final String withDefault(final Key key, final String value, final boolean nullOk) {
         String result = value;
         if (isEmpty(result)) {
             Properties properties = getProperties();
@@ -59,16 +95,31 @@ public class Defaults {
         return result;
     }
 
+    /**
+     * Apply defaults; raise an exception if no value found.
+     *
+     * @param key The name of the The name of the value.
+     * @param value The initial value (may be null).
+     * @return A value with defaults applied.
+     */
     public final String withDefault(final Key key, final String value) {
         return withDefault(key, value, false);
     }
 
-    public final void listTo(PrintStream out) {
+    /**
+     * List all the key/value pairs that were defined in DOT_FILE.
+     *
+     * @param out The destination to list to.
+     */
+    public final void listTo(final PrintStream out) {
         for (String name: getProperties().stringPropertyNames()) {
             out.printf("%s: %s%n", name, getProperties().getProperty(name));
         }
     }
 
+    /**
+     * @return The cached properties.
+     */
     private synchronized Properties getProperties() {
         if (propertiesCache == null) {
             propertiesCache = new Properties();
@@ -78,8 +129,13 @@ public class Defaults {
         return propertiesCache;
     }
 
+    /**
+     * @param dir The directory to load the properties from.
+     */
     private void loadPropertiesFrom(final String dir) {
-        if (dir == null) return;
+        if (dir == null) {
+            return;
+        }
         String path = dir + "/" + DOT_FILE;
         File file = new File(path);
         if (file.exists() && file.isFile() && file.canRead()) {

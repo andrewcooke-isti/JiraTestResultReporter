@@ -5,6 +5,9 @@
   <f:entry title="Jira Issue Type" field="issueType">
     <f:textbox field="issueType" />
   </f:entry>
+  <f:entry title="Jira Transition" field="transition">
+    <f:textbox field="transition" />
+  </f:entry>
   <f:entry title="Server Address" field="serverAddress">
     <f:textbox field="serverAddress"/>
   </f:entry>
@@ -19,8 +22,5 @@
   </f:entry>
   <f:entry title="Log debug info" field="debugFlag">
     <f:checkbox field="debugFlag" checked="${debugFlag}"/>
-  </f:entry>
-  <f:entry title="Log VERBOSE debug info" field="verboseDebugFlag">
-    <f:checkbox field="verboseDebugFlag" checked="${verboseDebugFlag}"/>
   </f:entry>
 </j:jelly>
