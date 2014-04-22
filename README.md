@@ -62,10 +62,3 @@ issue_type=bug
 
 * Disable "Create issue for all errors" so that only new errors are
   reported on subsequent runs.
-
-## Planned Work
-
-Future changes should include:
-
-* Closing issues when the test works again.
-
