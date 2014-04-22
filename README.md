@@ -18,44 +18,16 @@ The changes to the original include:
 
 * The issue type is configurable.
 
+* Issues are only created if Jira doesn't contains an unresolved,
+  matching issue.
+
+* When tests succeed, they are marked as done in Jira.  The transition
+  to make as done is configurable.
+
 * A command line interface, `com.isti.jira.CmdLine`, is available that
   provides similar functionality (making debugging initial
   configuration much easier, since you can test directly from the
   command line).
-
-  Some example output:
-
-```
-[cats@localhost jira-plugin]$ ./cmd-line-target.sh help create-issue
-NAME
-        CmdLine create-issue - Create a new issue
-
-SYNOPSIS
-        CmdLine [-H <url>] [-P <password>] [-U <user>] create-issue
-                [-d <description>] [-p <project>] [-s <summary>] [-t <type>]
-
-OPTIONS
-        -d <description>
-            Description
-
-        -H <url>
-            Jira URL
-
-        -p <project>
-            Project ID
-
-        -P <password>
-            Password to connect with
-
-        -s <summary>
-            Summary
-
-        -t <type>
-            Issue type
-
-        -U <user>
-            User to connect as
-```
 
 * Often-used configuration options can be given in a properties file
   in `/var/lib/jenkins/.catsjira` (or in the home directory of
@@ -90,10 +62,3 @@ issue_type=bug
 
 * Disable "Create issue for all errors" so that only new errors are
   reported on subsequent runs.
-
-## Planned Work
-
-Future changes should include:
-
-* Closing issues when the test works again.
-
