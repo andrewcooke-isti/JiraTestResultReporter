@@ -38,7 +38,7 @@ public final class JiraClient {
     /**
      * Allo anonymous connectinos (possible but useless)
      */
-    private static final boolean ALLOW_ANON = false;
+    public static final boolean ALLOW_ANON = false;
 
     /**
      * Source of default values (read from a "dot file").
@@ -174,8 +174,8 @@ public final class JiraClient {
         IssueType type = matchIssue(issueType, listIssueTypes(project));
         String jsql =
                 format("project=\"%s\" and creator=currentUser() and issuetype=\"%s\" and resolution=\"unresolved\"",
-                        project, type);
-        return client.getSearchClient().searchJql("").claim().getIssues();
+                        project, type.getName());
+        return client.getSearchClient().searchJql(jsql).claim().getIssues();
     }
 
     /**

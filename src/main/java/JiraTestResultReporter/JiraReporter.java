@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Set;
 
 import static com.isti.jira.Defaults.Key;
+import static com.isti.jira.JiraClient.ALLOW_ANON;
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isEmpty;
 
@@ -197,7 +198,7 @@ public final class JiraReporter extends Notifier {
                 client.createIssue(projectKey, issueType, summary, description);
 
             } else {
-                logger.printf("%s This issue is old; not reporting.%n", pInfo);
+                logger.printf("%s This issue is old; not reporting (select the 'create all' checkbox to force).%n", pInfo);
             }
         }
     }
@@ -267,6 +268,15 @@ public final class JiraReporter extends Notifier {
             }
         }
 
+        public FormValidation doCheckPassword(@QueryParameter String value) {
+            value = DEFAULTS.withDefault(Key.password, value, true);
+            if (isEmpty(value) && !ALLOW_ANON) {
+                return FormValidation.error("You must provide a password (here or in the defaults file).");
+            } else {
+                return FormValidation.ok();
+            }
+        }
+
         public FormValidation doCheckServerAddress(@QueryParameter String value) {
             value = DEFAULTS.withDefault(Key.url, value, true);
             if (isEmpty(value)) {
@@ -282,9 +292,9 @@ public final class JiraReporter extends Notifier {
             return FormValidation.ok();
         }
 
-        public FormValidation doCheckTransition(@QueryParameter String transition) {
-            transition = DEFAULTS.withDefault(Key.transition, transition, true);
-            if (isEmpty(transition)) {
+        public FormValidation doCheckTransition(@QueryParameter String value) {
+            value = DEFAULTS.withDefault(Key.transition, value, true);
+            if (isEmpty(value)) {
                 return FormValidation.error("You must provide a transition (here or in the defaults file).");
             } else {
                 return FormValidation.ok();
