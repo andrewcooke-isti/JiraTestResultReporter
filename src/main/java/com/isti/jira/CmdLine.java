@@ -27,6 +27,11 @@ import static java.lang.String.format;
 public final class CmdLine {
 
     /**
+     * Source of default values (most provided at lower layers, but sometimes we need to check here).
+     */
+    private static final Defaults DEFAULTS = new Defaults();
+
+    /**
      * Hide constructor for utility class.
      */
     private CmdLine() { }
@@ -37,7 +42,8 @@ public final class CmdLine {
      * @param args Command line arguments.
      */
     public static void main(final String[] args) {
-        Cli.CliBuilder<Runnable> builder = Cli.<Runnable>builder("CmdLine")
+        // this is installed as jira-remote
+        Cli.CliBuilder<Runnable> builder = Cli.<Runnable>builder("jira-remote")
                 .withDescription("Command line tool for Jira")
                 .withDefaultCommand(Help.class)
                 .withCommands(Help.class, ListDefaults.class, ListProjects.class, ListIssueTypes.class,
@@ -171,7 +177,13 @@ public final class CmdLine {
         public final void run() {
             JiraClient client = getClient();
             try {
-                client.createIssue(project, type, summary, description);
+                String title = DEFAULTS.withDefault(Defaults.Key.summary, summary, false);
+                for (Issue known: client.listUnresolvedIssues(project, type)) {
+                    if (title == known.getSummary()) {
+                        throw new MessageException("Issue already exists");
+                    }
+                }
+                client.createIssue(project, type, title, description);
             } finally {
                 client.close();
             }
@@ -225,7 +237,7 @@ public final class CmdLine {
     public static class ListTransitions extends Connection implements Runnable {
 
         /** Project from the command line. */
-        @Option(name = "-u", description = "Transition URI")
+        @Option(name = "-u", description = "Transition URI", required = true)
         private String uri;
 
         /**
@@ -259,7 +271,7 @@ public final class CmdLine {
         private String type;
 
         /** Issue ID from the command line. */
-        @Option(name = "-i", description = "Issue ID")
+        @Option(name = "-i", description = "Issue ID", required = true)
         private Long id;
 
         /** Transition from the command line. */

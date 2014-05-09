@@ -17,7 +17,7 @@ public class Defaults {
     /**
      * The name of the file that contains the defaults.
      */
-    private static final String DOT_FILE = ".catsjira";
+    private static final String DOT_FILE = ".jira-remote";
 
     /**
      * These are named exactly how the should appear in the properties file.
@@ -123,6 +123,7 @@ public class Defaults {
     private synchronized Properties getProperties() {
         if (propertiesCache == null) {
             propertiesCache = new Properties();
+            loadPropertiesFrom("/apps/data");
             loadPropertiesFrom("/var/lib/jenkins");
             loadPropertiesFrom(System.getProperty("home.user"));
         }

@@ -5,4 +5,4 @@ if [ `basename $PWD` != "JiraTestResultReporter" ]; then
     exit 1
 fi
 
-mvn clean install
+mvn clean compile assembly:single

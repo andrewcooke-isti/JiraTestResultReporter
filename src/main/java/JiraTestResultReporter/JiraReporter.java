@@ -238,7 +238,10 @@ public final class JiraReporter extends Notifier {
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Publisher> {
 
-        private static Defaults DEFAULTS = new Defaults();
+        /**
+         * Source of default values (typically from /var/lib/jenkins/.catsjira).
+         */
+        private static final Defaults DEFAULTS = new Defaults();
 
         @Override
         public boolean isApplicable(final Class<? extends AbstractProject> jobType) {

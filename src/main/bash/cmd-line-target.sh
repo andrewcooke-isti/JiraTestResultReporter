@@ -5,4 +5,5 @@ if [ `basename $PWD` != "JiraTestResultReporter" ]; then
     exit 1
 fi
 
-java -cp "target/jenkins-for-test/WEB-INF/lib/*":"target/JiraTestResultReporter/WEB-INF/lib/*":target/classes com.isti.jira.CmdLine $@
+#java -cp "target/jenkins-for-test/WEB-INF/lib/*":"target/JiraTestResultReporter/WEB-INF/lib/*":target/classes com.isti.jira.CmdLine $@
+java -cp target/JiraTestResultReporter-jar-with-dependencies.jar com.isti.jira.CmdLine $@
