@@ -132,7 +132,7 @@ public class Defaults {
         }
         for (String name: known) {
             String value = withDefault(Key.valueOf(name), "[null]");
-            out.printf("%s: %s%n", name, value);
+            out.printf("%s (default): %s%n", name, value);
         }
     }
 
