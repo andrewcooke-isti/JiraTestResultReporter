@@ -4,7 +4,9 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
 
 import static org.apache.commons.lang.StringUtils.isEmpty;
 
@@ -114,8 +116,23 @@ public class Defaults {
      * @param out The destination to list to.
      */
     public final void listTo(final PrintStream out) {
-        for (String name: getProperties().stringPropertyNames()) {
-            out.printf("%s: %s%n", name, getProperties().getProperty(name));
+        Properties properties = getProperties();
+        Set<String> known = new HashSet<String>();
+        for (Key key: Key.values()) {
+            known.add(key.name());
+        }
+        for (String name: properties.stringPropertyNames()) {
+            String value = properties.getProperty(name);
+            if (known.contains(name)) {
+                out.printf("%s: %s%n", name, value);
+                known.remove(name);
+            } else {
+                out.printf("%s (unknown): %s%n", name, value);
+            }
+        }
+        for (String name: known) {
+            String value = withDefault(Key.valueOf(name), "[null]");
+            out.printf("%s: %s%n", name, value);
         }
     }
 
