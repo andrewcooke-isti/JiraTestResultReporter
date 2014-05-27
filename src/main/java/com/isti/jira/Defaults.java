@@ -141,7 +141,7 @@ public class Defaults {
             }
         }
         for (String name: known) {
-            String value = withDefault(Key.valueOf(name));
+            String value = withDefault(Key.valueOf(name), null, true);
             out.printf("%s (default): %s%n", name, value);
         }
     }
