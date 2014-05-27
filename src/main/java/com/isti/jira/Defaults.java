@@ -34,8 +34,10 @@ public class Defaults {
         url("http://localhost:80801"),
         /** The project to create issues for (usually not supplied). */
         project,
-        /** The ussue type to create. */
+        /** The issue type to create. */
         issue_type("bug"),
+        /** The role that "owns" an issue */
+        role("reporter"),
         /** A summary of the issue (usually not supplied). */
         summary,
         /** A description of the issue (usually not supplied). */
