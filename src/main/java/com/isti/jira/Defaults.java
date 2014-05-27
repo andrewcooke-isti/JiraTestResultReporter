@@ -38,7 +38,7 @@ public class Defaults {
         project,
         /** The issue type to create. */
         issue_type("bug"),
-        /** The role that "owns" an issue */
+        /** The role that "owns" an issue. */
         role("reporter"),
         /** A summary of the issue (usually not supplied). */
         summary,
@@ -53,7 +53,7 @@ public class Defaults {
         private final String deflt;
 
         /**
-         * Create a key witha default.
+         * Create a key with a default.
          *
          * @param theDeflt The default value if non supplied.
          */
@@ -111,6 +111,16 @@ public class Defaults {
     }
 
     /**
+     * Apply defaults; raise an exception if no value found.
+     *
+     * @param key The name of the The name of the value.
+     * @return A value with defaults applied.
+     */
+    public final String withDefault(final Key key) {
+        return withDefault(key, null, false);
+    }
+
+    /**
      * List all the key/value pairs that were defined in DOT_FILE.
      *
      * @param out The destination to list to.
@@ -131,7 +141,7 @@ public class Defaults {
             }
         }
         for (String name: known) {
-            String value = withDefault(Key.valueOf(name), "[null]");
+            String value = withDefault(Key.valueOf(name));
             out.printf("%s (default): %s%n", name, value);
         }
     }
