@@ -219,7 +219,7 @@ public final class JiraClient {
                 return transition;
             }
         }
-        throw new MessageException(format("No transition matching %s", transitionName));
+        throw new MessageException(format("No transition matching %s", name));
     }
 
     /**

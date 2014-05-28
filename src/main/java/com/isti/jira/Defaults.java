@@ -33,7 +33,7 @@ public class Defaults {
         /** The password to use in a connection. */
         password,
         /** The URL to connect to. */
-        url("http://localhost:80801"),
+        url("http://localhost:8081"),
         /** The project to create issues for (usually not supplied). */
         project,
         /** The issue type to create. */

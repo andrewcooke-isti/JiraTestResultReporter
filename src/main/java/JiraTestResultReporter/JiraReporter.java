@@ -51,6 +51,7 @@ public final class JiraReporter extends Notifier {
     private static final String PLUGIN_NAME = "[JiraTestResultReporter]";
     private final String pInfo = format("%s [INFO]", PLUGIN_NAME);
     private final String pDebug = format("%s [DEBUG]", PLUGIN_NAME);
+    private static final Defaults DEFAULTS = new Defaults();
 
 
     // THESE ARGUMENTS MUST MATCH THE ATTRIBUTE NAMES OR THE PLUGIN DOESN'T WORK (field values set by name afaict)
@@ -88,7 +89,7 @@ public final class JiraReporter extends Notifier {
         logger.printf("%s Examining test results...%n", pInfo);
 
         debugLog(listener,
-                format("Build result is %s%n",
+                format("Build result is %s",
                         build.getResult().toString())
         );
 
@@ -189,8 +190,8 @@ public final class JiraReporter extends Notifier {
             } else if ((result.getAge() == 1) || (this.createAllFlag)) {
                 debugLog(listener,
                         format("Creating issue in project %s at URL %s%n",
-                                this.projectKey, this.serverUrl)
-                );
+                               DEFAULTS.withDefault(Key.project, projectKey),
+                               DEFAULTS.withDefault(Key.url, serverUrl)));
                 String description = format("%s\nClass: %s\nTrace: %s",
                         result.getErrorDetails(),
                         result.getClassName(),
