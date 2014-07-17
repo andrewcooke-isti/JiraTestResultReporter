@@ -115,6 +115,11 @@
       <artifactId>airline</artifactId>
       <version>0.6</version>
     </dependency>
+    <dependency>
+      <groupId>org.tap4j</groupId>
+      <artifactId>tap</artifactId>
+      <version>1.19-SNAPSHOT</version>
+    </dependency>
   </dependencies>
 
   <dependencyManagement>

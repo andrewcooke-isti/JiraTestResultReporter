@@ -14,13 +14,17 @@ import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
 import hudson.tasks.junit.CaseResult;
 import hudson.tasks.test.AbstractTestResultAction;
+import hudson.tasks.test.MetaTabulatedResult;
+import hudson.tasks.test.TestResult;
 import hudson.util.FormValidation;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
+import org.tap4j.plugin.model.TapStreamResult;
 
 import java.io.PrintStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -96,7 +100,15 @@ public final class JiraReporter extends Notifier {
         String workspace = build.getWorkspace().toString();
         String tag = jenkinsProjectTag(build.getProject().getName());
         AbstractTestResultAction<?> testResultAction = build.getTestResultAction();
-        List<CaseResult> failedTests = testResultAction.getFailedTests();
+        Object result = testResultAction.getResult();
+        Collection<? extends TestResult> failedTests = null;
+        if (result instanceof TapStreamResult) {
+            failedTests = ((TapStreamResult) result).getFailedTests2();
+        } else if (result instanceof MetaTabulatedResult) {
+            failedTests = ((MetaTabulatedResult) result).getFailedTests();
+        } else {
+            throw new RuntimeException(format("Cannot handle type %s", result.getClass().getSimpleName()));
+        }
 
         printResultItems(failedTests, workspace, listener);
         // create each time since it's not clear how to close on Jenkins shutdown
@@ -114,14 +126,14 @@ public final class JiraReporter extends Notifier {
         return true;
     }
 
-    private void printResultItems(final List<CaseResult> failedTests,
+    private void printResultItems(final Collection<? extends TestResult> failedTests,
                                   final String workspace,
                                   final BuildListener listener) {
         if (!this.debugFlag) {
             return;
         }
         PrintStream out = listener.getLogger();
-        for (CaseResult result : failedTests) {
+        for (TestResult result : failedTests) {
             out.printf("%s projectKey: %s%n", pDebug, this.projectKey);
             out.printf("%s errorDetails: %s%n", pDebug, result.getErrorDetails());
             out.printf("%s fullName: %s%n", pDebug, result.getFullName());
@@ -164,7 +176,7 @@ public final class JiraReporter extends Notifier {
      * @param failedTest The failing test.
      * @return A summary used to identify the test.
      */
-    private String summarize(final String tag, final CaseResult failedTest) {
+    private String summarize(final String tag, final TestResult failedTest) {
         return format("Test %s failed in %s %s", failedTest.getName(), failedTest.getClassName(), tag);
     }
 
@@ -204,7 +216,7 @@ public final class JiraReporter extends Notifier {
         }
     }
 
-    void closeJiraIssues(final List<CaseResult> failedTests,
+    void closeJiraIssues(final Collection<? extends TestResult> failedTests,
                          final Iterable<Issue> existingIssues,
                          final String tag,
                          final BuildListener listener,
@@ -213,7 +225,7 @@ public final class JiraReporter extends Notifier {
         PrintStream logger = listener.getLogger();
 
         Set<String> known = new HashSet<String>();
-        for (CaseResult result: failedTests) {
+        for (TestResult result: failedTests) {
             known.add(summarize(tag, result));
         }
 
