@@ -118,7 +118,7 @@
     <dependency>
       <groupId>org.tap4j</groupId>
       <artifactId>tap</artifactId>
-      <version>1.19-SNAPSHOT</version>
+      <version>1.18</version>
     </dependency>
   </dependencies>
 

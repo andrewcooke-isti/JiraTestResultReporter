@@ -136,19 +136,23 @@ public final class JiraReporter extends Notifier {
         for (TestResult result : failedTests) {
             out.printf("%s projectKey: %s%n", pDebug, this.projectKey);
             out.printf("%s errorDetails: %s%n", pDebug, result.getErrorDetails());
-            out.printf("%s fullName: %s%n", pDebug, result.getFullName());
-            out.printf("%s simpleName: %s%n", pDebug, result.getSimpleName());
             out.printf("%s title: %s%n", pDebug, result.getTitle());
-            out.printf("%s packageName: %s%n", pDebug, result.getPackageName());
             out.printf("%s name: %s%n", pDebug, result.getName());
-            out.printf("%s className: %s%n", pDebug, result.getClassName());
             out.printf("%s failedSince: %d%n", pDebug, result.getFailedSince());
-            out.printf("%s status: %s%n", pDebug, result.getStatus().toString());
-            out.printf("%s age: %s%n", pDebug, result.getAge());
             out.printf("%s ErrorStackTrace: %s%n", pDebug, result.getErrorStackTrace());
-
             String affectedFile = result.getErrorStackTrace().replace(workspace, "");
             out.printf("%s affectedFile: %s%n", pDebug, affectedFile);
+            if (result instanceof CaseResult) {
+                CaseResult caseResult = (CaseResult) result;
+                out.printf("%s fullName: %s%n", pDebug, caseResult.getFullName());
+                out.printf("%s simpleName: %s%n", pDebug, caseResult.getSimpleName());
+                out.printf("%s packageName: %s%n", pDebug, caseResult.getPackageName());
+                out.printf("%s className: %s%n", pDebug, caseResult.getClassName());
+                out.printf("%s status: %s%n", pDebug, caseResult.getStatus().toString());
+                out.printf("%s age: %s%n", pDebug, caseResult.getAge());
+            } else {
+                out.printf("WARNING: Not CaseResult instance%n");
+            }
             out.printf("%s ----------------------------%n", pDebug);
         }
     }
@@ -176,11 +180,11 @@ public final class JiraReporter extends Notifier {
      * @param failedTest The failing test.
      * @return A summary used to identify the test.
      */
-    private String summarize(final String tag, final TestResult failedTest) {
+    private String summarize(final String tag, final CaseResult failedTest) {
         return format("Test %s failed in %s %s", failedTest.getName(), failedTest.getClassName(), tag);
     }
 
-    void createJiraIssues(final List<CaseResult> failedTests,
+    void createJiraIssues(final Collection<? extends TestResult> failedTests,
                           final Iterable<Issue> existingIssues,
                           final String tag,
                           final String workspace,
@@ -193,21 +197,22 @@ public final class JiraReporter extends Notifier {
             known.add(issue.getSummary());
         }
 
-        for (CaseResult result : failedTests) {
-            String summary = summarize(tag, result);
+        for (TestResult result : failedTests) {
+            CaseResult caseResult = castOrFail(result);
+            String summary = summarize(tag, caseResult);
 
             if (known.contains(summary)) {
                 logger.printf("%s Jira already contains \"%s\".%n", pInfo, summary);
 
-            } else if ((result.getAge() == 1) || (this.createAllFlag)) {
+            } else if ((caseResult.getAge() == 1) || (this.createAllFlag)) {
                 debugLog(listener,
                         format("Creating issue in project %s at URL %s%n",
                                DEFAULTS.withDefault(Key.project, projectKey),
                                DEFAULTS.withDefault(Key.url, serverUrl)));
                 String description = format("%s\nClass: %s\nTrace: %s",
-                        result.getErrorDetails(),
-                        result.getClassName(),
-                        result.getErrorStackTrace().replace(workspace, ""));
+                        caseResult.getErrorDetails(),
+                        caseResult.getClassName(),
+                        caseResult.getErrorStackTrace().replace(workspace, ""));
                 client.createIssue(projectKey, issueType, summary, description);
 
             } else {
@@ -226,7 +231,7 @@ public final class JiraReporter extends Notifier {
 
         Set<String> known = new HashSet<String>();
         for (TestResult result: failedTests) {
-            known.add(summarize(tag, result));
+            known.add(summarize(tag, castOrFail(result)));
         }
 
         // run through the open issues and see which are no longer present
@@ -246,6 +251,11 @@ public final class JiraReporter extends Notifier {
     @Override
     public DescriptorImpl getDescriptor() {
         return (DescriptorImpl) super.getDescriptor();
+    }
+
+    // for now, just case - perhaps later we need to do something else?
+    static CaseResult castOrFail(TestResult result) {
+        return (CaseResult) result;
     }
 
     @Extension
