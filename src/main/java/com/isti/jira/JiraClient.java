@@ -134,14 +134,14 @@ public final class JiraClient {
      * @param types Types known to the system.
      * @return A type known to the system that matches the name given by the user.
      */
-    private CimIssueType matchIssue(final String issueType, final Iterable<CimIssueType> types) {
+    private CimIssueType matchIssueType(final String issueType, final Iterable<CimIssueType> types) {
         String type = DEFAULTS.withDefault(Key.issue_type, issueType);
         for (CimIssueType issue : types) {
             if (issue.getName().equalsIgnoreCase(type)) {
                 return issue;
             }
         }
-        throw new MessageException(format("No issue matching %s", issueType));
+        throw new MessageException(format("No issue type matching %s", issueType));
     }
 
     /**
@@ -155,7 +155,7 @@ public final class JiraClient {
      */
     public void createIssue(final String project, final String issueType,
                             final String summary, final String description) {
-        IssueType type = matchIssue(issueType, listIssueTypes(project));
+        IssueType type = matchIssueType(issueType, listIssueTypes(project));
         IssueInputBuilder issueBuilder =
                 new IssueInputBuilder(DEFAULTS.withDefault(Key.project, project), type.getId());
         issueBuilder.setSummary(DEFAULTS.withDefault(Key.summary, summary));
@@ -171,7 +171,7 @@ public final class JiraClient {
      * @return A list of unresolved issues that match thr project and type.
      */
     public Iterable<Issue> listUnresolvedIssues(final String project, final String issueType) {
-        IssueType type = matchIssue(issueType, listIssueTypes(project));
+        IssueType type = matchIssueType(issueType, listIssueTypes(project));
         String role = DEFAULTS.withDefault(Key.role);
         String jsql =
                 format("project=\"%s\" and %s=currentUser() and issuetype=\"%s\" and resolution=\"unresolved\"",
