@@ -171,11 +171,12 @@ public final class JiraClient {
      * @return A list of unresolved issues that match thr project and type.
      */
     public Iterable<Issue> listUnresolvedIssues(final String project, final String issueType) {
-        IssueType type = matchIssueType(issueType, listIssueTypes(project));
+        String p = DEFAULTS.withDefault(Key.project, project);
+        IssueType type = matchIssueType(issueType, listIssueTypes(p));
         String role = DEFAULTS.withDefault(Key.role);
         String jsql =
                 format("project=\"%s\" and %s=currentUser() and issuetype=\"%s\" and resolution=\"unresolved\"",
-                       project, role, type.getName());
+                        p, role, type.getName());
         return client.getSearchClient().searchJql(jsql).claim().getIssues();
     }
 
