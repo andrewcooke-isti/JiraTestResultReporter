@@ -141,7 +141,7 @@ public final class JiraClient {
                 return issue;
             }
         }
-        throw new MessageException(format("No issue type matching %s", issueType));
+        throw new MessageException(format("No issue type matching %s", type));
     }
 
     /**
