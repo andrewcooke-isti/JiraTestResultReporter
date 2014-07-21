@@ -128,20 +128,15 @@ public class Defaults {
         Properties properties = getProperties();
         Set<String> known = new HashSet<String>();
         for (Key key: Key.values()) {
+            String value = withDefault(key, null, true);
+            out.printf("%s: %s%n", key.name(), value);
             known.add(key.name());
         }
         for (String name: properties.stringPropertyNames()) {
-            String value = properties.getProperty(name);
-            if (known.contains(name)) {
-                out.printf("%s: %s%n", name, value);
-                known.remove(name);
-            } else {
+            if (! known.contains(name)) {
+                String value = properties.getProperty(name);
                 out.printf("%s (unknown): %s%n", name, value);
             }
-        }
-        for (String name: known) {
-            String value = withDefault(Key.valueOf(name), null, true);
-            out.printf("%s (default): %s%n", name, value);
         }
     }
 
