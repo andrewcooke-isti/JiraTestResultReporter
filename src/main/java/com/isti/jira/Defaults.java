@@ -85,10 +85,9 @@ public class Defaults {
      * @return A value with defaults applied.
      */
     public final String withDefault(final Key key, final String value, final boolean nullOk) {
-        String result = value;
-        if (isEmpty(result)) {
-            Properties properties = getProperties();
-            result = properties.getProperty(key.name());
+        String result = value == null ? value : value.trim();
+        if (isEmpty(result) && getProperties().contains(key.name())) {
+            result = getProperties().getProperty(key.name());
         }
         if (isEmpty(result)) {
             result = key.deflt;
