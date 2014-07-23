@@ -3,26 +3,27 @@ package com.isti.jira;
 import com.atlassian.jira.rest.client.api.AuthenticationHandler;
 import com.atlassian.jira.rest.client.api.GetCreateIssueMetadataOptions;
 import com.atlassian.jira.rest.client.api.JiraRestClient;
-import com.atlassian.jira.rest.client.api.domain.BasicProject;
-import com.atlassian.jira.rest.client.api.domain.CimIssueType;
-import com.atlassian.jira.rest.client.api.domain.CimProject;
-import com.atlassian.jira.rest.client.api.domain.Issue;
-import com.atlassian.jira.rest.client.api.domain.IssueType;
-import com.atlassian.jira.rest.client.api.domain.Transition;
+import com.atlassian.jira.rest.client.api.domain.*;
 import com.atlassian.jira.rest.client.api.domain.input.IssueInputBuilder;
 import com.atlassian.jira.rest.client.api.domain.input.TransitionInput;
 import com.atlassian.jira.rest.client.auth.AnonymousAuthenticationHandler;
 import com.atlassian.jira.rest.client.auth.BasicHttpAuthenticationHandler;
 import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientFactory;
+import hudson.model.Run;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Objects;
 
 import static com.isti.jira.Defaults.Key;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
+import static org.apache.commons.lang.StringUtils.isBlank;
+import static org.apache.commons.lang.StringUtils.isEmpty;
 
 
 /**
@@ -34,6 +35,12 @@ import static java.util.Collections.singletonList;
  * underlying Jira library.  Use try / finally at the top level.
  */
 public final class JiraClient {
+
+    public static String CATS_REPOSITORY = "CATS Repository";
+
+    public static String CATS_BRANCH = "CATS Branch";
+
+    public static String CATS_HASH = "CATS Hash";
 
     /**
      * Allo anonymous connectinos (possible but useless)
@@ -49,6 +56,8 @@ public final class JiraClient {
      * The underlying client that does the work of connecting to Jira.
      */
     private JiraRestClient client;
+
+    private Map<String, Field> cachedFields = null;
 
     /**
      * @param url The URL to connect to.
@@ -144,22 +153,48 @@ public final class JiraClient {
         throw new MessageException(format("No issue type matching %s", type));
     }
 
+    private synchronized Field matchFieldName(final String fieldName) {
+        if (null == cachedFields) {
+            cachedFields = new HashMap<String, Field>();
+            for (Field field: client.getMetadataClient().getFields().claim()) {
+                // use null to indicate duplicates
+                cachedFields.put(field.getName(), cachedFields.containsKey(field.getName()) ? null : field);
+            }
+        }
+        if (cachedFields.containsKey(fieldName)) {
+            if (null == cachedFields.get(fieldName)) {
+                throw new RuntimeException(format("Field name '%s' is not unique", fieldName));
+            } else {
+                return cachedFields.get(fieldName);
+            }
+        } else {
+            throw new RuntimeException(format("Unknown field name '%s'", fieldName));
+        }
+    }
+
     /**
      * Create an issue.  All the parameters below are provided with defaults and the issue type is expanded
      * against the project's known issue types.
      *
      * @param project The project name.
      * @param issueType The issue type.
-     * @param summary The summary of the issue (used as a title in Jira).
-     * @param description The description of the issue (used as the text in Jira).
      */
-    public void createIssue(final String project, final String issueType,
-                            final String summary, final String description) {
+    public void createIssue(final String project,
+                            final String issueType,
+                            final RepoDetails repo,
+                            final UniformTestResult result) {
         IssueType type = matchIssueType(issueType, listIssueTypes(project));
         IssueInputBuilder issueBuilder =
                 new IssueInputBuilder(DEFAULTS.withDefault(Key.project, project), type.getId());
-        issueBuilder.setSummary(DEFAULTS.withDefault(Key.summary, summary));
-        issueBuilder.setDescription(DEFAULTS.withDefault(Key.description, description));
+        issueBuilder.setSummary(DEFAULTS.withDefault(Key.summary, result.getSummary()));
+        issueBuilder.setDescription(DEFAULTS.withDefault(Key.description, result.getDescription()));
+        issueBuilder.setFieldValue(
+                matchFieldName(CATS_REPOSITORY).getId(),
+                DEFAULTS.withDefault(Key.repository, repo.getURL(), true));
+        issueBuilder.setFieldValue(
+                matchFieldName(CATS_BRANCH).getId(),
+                DEFAULTS.withDefault(Key.branch, repo.getBranch(), true));
+        issueBuilder.setFieldValue(matchFieldName(CATS_HASH).getId(), result.getHash(repo));
         client.getIssueClient().createIssue(issueBuilder.build()).claim();
     }
 
@@ -170,14 +205,20 @@ public final class JiraClient {
      * @param issueType The issue type.
      * @return A list of unresolved issues that match thr project and type.
      */
-    public Iterable<Issue> listUnresolvedIssues(final String project, final String issueType) {
+    public Iterable<Issue> listUnresolvedIssues(final String project,
+                                                final String issueType,
+                                                final RepoDetails repo) {
         String p = DEFAULTS.withDefault(Key.project, project);
         IssueType type = matchIssueType(issueType, listIssueTypes(p));
         String role = DEFAULTS.withDefault(Key.role);
-        String jsql =
+        StringBuilder jsql = new StringBuilder(
                 format("project=\"%s\" and %s=currentUser() and issuetype=\"%s\" and resolution=\"unresolved\"",
-                        p, role, type.getName());
-        return client.getSearchClient().searchJql(jsql).claim().getIssues();
+                        p, role, type.getName()));
+        String url = DEFAULTS.withDefault(Key.repository, repo.getURL(), true);
+        if (! isBlank(url)) jsql.append(format(" and %s=\"%s\"", CATS_REPOSITORY, url));
+        String branch = DEFAULTS.withDefault(Key.branch, repo.getBranch(), true);
+        if (! isBlank(branch)) jsql.append(format(" and %s=\"%s\"", CATS_BRANCH, branch));
+        return client.getSearchClient().searchJql(jsql.toString()).claim().getIssues();
     }
 
     /**
@@ -243,8 +284,10 @@ public final class JiraClient {
      * @param issueId The issue ID.
      * @param transitionName The name of the transition.
      */
-    public void closeIssue(final String project, final String issueType,
-            final Long issueId, final String transitionName) {
+    public void closeIssue(final String project,
+                           final String issueType,
+                           final Long issueId,
+                           final String transitionName) {
         Issue issue = matchIssue(issueId, listUnresolvedIssues(project, issueType));
         closeIssue(issue, transitionName);
     }

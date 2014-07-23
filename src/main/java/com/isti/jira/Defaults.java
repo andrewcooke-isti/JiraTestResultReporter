@@ -45,7 +45,9 @@ public class Defaults {
         /** A description of the issue (usually not supplied). */
         description,
         /** The transition needed to resolve the issue. */
-        transition("done");
+        transition("done"),
+        repository,
+        branch;
 
         /**
          * The default value (may be null, eg in the case of password).
