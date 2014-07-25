@@ -2,6 +2,7 @@ package com.isti.jira;
 
 import hudson.model.AbstractBuild;
 
+import java.io.IOException;
 import java.util.Map;
 
 
@@ -38,7 +39,12 @@ public final class RepoDetails {
      * @return A map of environment variables.
      */
     private static Map<String, String> vars(final AbstractBuild build) {
-        return build.getBuildVariables();
+//        return build.getBuildVariables();
+        try {
+            return build.getEnvironment(null);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
