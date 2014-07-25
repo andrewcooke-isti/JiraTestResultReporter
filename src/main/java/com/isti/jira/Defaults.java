@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
 
+import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isBlank;
 
 
@@ -90,11 +91,14 @@ public class Defaults {
      */
     public final String withDefault(final Key key, final String value, final boolean nullOk) {
         String result = value == null ? value : value.trim();
+        System.err.println(format("value: %s", result));
         if (isBlank(result) && getProperties().contains(key.name())) {
             result = getProperties().getProperty(key.name());
+            System.err.println(format("prop: %s", result));
         }
         if (isBlank(result)) {
             result = key.deflt;
+            System.err.println(format("deflt: %s", result));
         }
         if (isBlank(result) && !nullOk) {
             throw new MissingArgumentException(key.name());
