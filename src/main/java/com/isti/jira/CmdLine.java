@@ -15,7 +15,7 @@ import io.airlift.command.OptionType;
 import java.net.URI;
 
 import static java.lang.String.format;
-import static JiraTestResultReporter.JiraReporter.HASH_FIELD;
+import static com.isti.jira.JiraClient.CATS_HASH;
 
 
 /**
@@ -205,7 +205,7 @@ public final class CmdLine {
             JiraClient client = getClient();
             try {
                 for (Issue known: client.listUnresolvedIssues(project, type, repo)) {
-                    if (hash.equals(known.getFieldByName(HASH_FIELD).toString())) {
+                    if (hash.equals(known.getFieldByName(CATS_HASH).toString())) {
                         throw new MessageException("Issue already exists");
                     }
                 }

@@ -8,7 +8,7 @@ import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
 
-import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.apache.commons.lang.StringUtils.isBlank;
 
 
 /**
@@ -90,13 +90,13 @@ public class Defaults {
      */
     public final String withDefault(final Key key, final String value, final boolean nullOk) {
         String result = value == null ? value : value.trim();
-        if (isEmpty(result) && getProperties().contains(key.name())) {
+        if (isBlank(result) && getProperties().contains(key.name())) {
             result = getProperties().getProperty(key.name());
         }
-        if (isEmpty(result)) {
+        if (isBlank(result)) {
             result = key.deflt;
         }
-        if (isEmpty(result) && !nullOk) {
+        if (isBlank(result) && !nullOk) {
             throw new MissingArgumentException(key.name());
         }
         return result;
@@ -133,7 +133,11 @@ public class Defaults {
         Set<String> known = new HashSet<String>();
         for (Key key: Key.values()) {
             String value = withDefault(key, null, true);
-            out.printf("%s: %s%n", key.name(), value);
+            if (properties.containsKey(key.name())) {
+                out.printf("%s: %s (%s)%n", key.name(), value, properties.getProperty(key.name()));
+            } else {
+                out.printf("%s: %s%n", key.name(), value);
+            }
             known.add(key.name());
         }
         for (String name: properties.stringPropertyNames()) {
