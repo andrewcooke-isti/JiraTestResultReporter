@@ -232,11 +232,14 @@ public final class JiraClient {
                         p, role, type.getName()));
         String url = DEFAULTS.withDefault(Key.repository, repo.getURL(), true);
         if (!isBlank(url)) {
-            jsql.append(format(" and \"%s\"=\"%s\"", CATS_REPOSITORY, url));
+            // both searches are on text fields and require "contains".
+            //for an exact match they also require quotes.
+            // in jql that means "foo"~"\"bar\""
+            jsql.append(format(" and \"%s\"~\"\\\"%s\\\"\"", CATS_REPOSITORY, url));
         }
         String branch = DEFAULTS.withDefault(Key.branch, repo.getBranch(), true);
         if (!isBlank(branch)) {
-            jsql.append(format(" and \"%s\"=\"%s\"", CATS_BRANCH, branch));
+            jsql.append(format(" and \"%s\"~\"\\\"%s\\\"\"", CATS_BRANCH, branch));
         }
         return client.getSearchClient().searchJql(jsql.toString()).claim().getIssues();
     }
