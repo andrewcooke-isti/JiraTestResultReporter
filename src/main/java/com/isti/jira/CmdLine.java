@@ -93,11 +93,11 @@ public final class CmdLine {
     private static class GitConnection extends Connection {
 
         /** Git repository. */
-        @Option(type = OptionType.GLOBAL, name = "-r", description = "Git repository")
+        @Option(name = "-r", description = "Git repository")
         private String repo;
 
         /** Git branch. */
-        @Option(type = OptionType.GLOBAL, name = "-b", description = "Git branch")
+        @Option(name = "-b", description = "Git branch")
         private String branch;
 
         /**

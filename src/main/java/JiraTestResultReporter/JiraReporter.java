@@ -27,6 +27,7 @@ import java.util.Set;
 
 import static com.isti.jira.Defaults.Key;
 import static com.isti.jira.JiraClient.ALLOW_ANON;
+import static com.isti.jira.JiraClient.CATS_HASH;
 import static com.isti.jira.UniformTestResult.unpack;
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isEmpty;
@@ -54,7 +55,6 @@ public final class JiraReporter extends Notifier {
     private final String pDebug = format("%s [DEBUG]", PLUGIN_NAME);
 
     private static final Defaults DEFAULTS = new Defaults();
-    public static final String HASH_FIELD = "CATS Hash";
 
     // THESE ARGUMENTS MUST MATCH THE ATTRIBUTE NAMES OR THE PLUGIN DOESN'T WORK (field values set by name afaict)
     @DataBoundConstructor
@@ -136,7 +136,7 @@ public final class JiraReporter extends Notifier {
 
         Set<String> known = new HashSet<String>();
         for (Issue issue: existingIssues) {
-            known.add(issue.getFieldByName(HASH_FIELD).getValue().toString());
+            known.add(issue.getFieldByName(CATS_HASH).getValue().toString());
         }
 
         for (UniformTestResult result : failedTests) {
@@ -169,7 +169,7 @@ public final class JiraReporter extends Notifier {
 
         // run through the open issues and see which are no longer present
         for (Issue issue: existingIssues) {
-            String hash = issue.getFieldByName(HASH_FIELD).getValue().toString();
+            String hash = issue.getFieldByName(CATS_HASH).getValue().toString();
             if (known.contains(hash)) {
                 logger.info("Keeping: '%s'", issue.getSummary());
             } else {
