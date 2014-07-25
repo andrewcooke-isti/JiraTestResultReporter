@@ -46,7 +46,9 @@ public class Defaults {
         description,
         /** The transition needed to resolve the issue. */
         transition("done"),
+        /** The repository containing the code being tested. */
         repository,
+        /** The repo branch containing the code being tested. */
         branch;
 
         /**
@@ -135,7 +137,7 @@ public class Defaults {
             known.add(key.name());
         }
         for (String name: properties.stringPropertyNames()) {
-            if (! known.contains(name)) {
+            if (!known.contains(name)) {
                 String value = properties.getProperty(name);
                 out.printf("%s (unknown): %s%n", name, value);
             }

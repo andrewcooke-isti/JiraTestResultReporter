@@ -115,11 +115,16 @@
       <artifactId>airline</artifactId>
       <version>0.6</version>
     </dependency>
-    <dependency>
-      <groupId>org.tap4j</groupId>
-      <artifactId>tap</artifactId>
-      <version>1.18</version>
-    </dependency>
+      <dependency>
+          <groupId>org.tap4j</groupId>
+          <artifactId>tap</artifactId>
+          <version>1.18</version>
+      </dependency>
+      <!-- dependency>
+          <groupId>org.jenkins-ci.plugins</groupId>
+          <artifactId>git</artifactId>
+          <version>2.2.2</version>
+      </dependency -->
   </dependencies>
 
   <dependencyManagement>

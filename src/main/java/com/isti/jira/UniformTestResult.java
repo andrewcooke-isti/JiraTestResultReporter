@@ -2,7 +2,6 @@ package com.isti.jira;
 
 import com.google.common.base.Function;
 import hudson.model.AbstractBuild;
-import hudson.model.Run;
 import hudson.tasks.junit.CaseResult;
 import hudson.tasks.test.MetaTabulatedResult;
 import hudson.tasks.test.TestResult;
@@ -12,13 +11,13 @@ import org.tap4j.plugin.model.TapTestResultResult;
 
 import javax.annotation.Nullable;
 
-import java.io.PrintStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import static com.google.common.collect.Iterables.transform;
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isBlank;
+
 
 /**
  * Different test plugins create different classes to represent test results.
@@ -35,12 +34,12 @@ import static org.apache.commons.lang.StringUtils.isBlank;
  *
  * In addition, we need the know whether the failure is new (if available).
  */
-public class UniformTestResult {
+public final class UniformTestResult {
 
     /** A summary (used for JIRA issue title). */
     private String summary;
 
-    /** A description (used ofr JIRA body). */
+    /** A description (used for JIRA body). */
     private String description;
 
     /** The error message (hashed with the repo details). */
@@ -52,16 +51,33 @@ public class UniformTestResult {
     private boolean isNew = true;
 
 
+    /**
+     * Assumes test is new and copies summary to error.
+     * @param summary Summary of the failing test.
+     * @param description Description of the failing test.
+     */
     public UniformTestResult(final String summary, final String description) {
-        this(summary, description, summary, true);
+        this(summary, description, summary);
     }
 
+    /**
+     * Assumes test is new.
+     * @param summary Summary of the failing test.
+     * @param description Description of the failing test.
+     * @param error The error message (independent of details that might change).
+     */
     public UniformTestResult(final String summary,
                              final String description,
                              final String error) {
         this(summary, description, error, true);
     }
 
+    /**
+     * @param summary Summary of the failing test.
+     * @param description Description of the failing test.
+     * @param error The error message (independent of details that might change).
+     * @param isNew Is the test a new failure?
+     */
     public UniformTestResult(final String summary,
                              final String description,
                              final String error,
@@ -72,12 +88,21 @@ public class UniformTestResult {
         this.isNew = isNew;
     }
 
-    private UniformTestResult(TapTestResultResult result) {
-        throw new RuntimeException("TAP not supported yet");
+    /**
+     * @param result The TAP result to extract data from.
+     */
+    private UniformTestResult(final TapTestResultResult result) {
+        this(format("Test '%s' failed", result.getName()),
+             format("%s: %s", result.getTitle(), result.getErrorDetails()),
+             result.getErrorDetails());
     }
 
-    private UniformTestResult(CaseResult result, String workspace) {
-        this(format("Test %s failed in %s", result.getName(), result.getClassName()),
+    /**
+     * @param result The CaseResult to extract data from.
+     * @param workspace Workspace path (used to fix stack traces).
+     */
+    private UniformTestResult(final CaseResult result, final String workspace) {
+        this(format("Test '%s' failed in %s", result.getName(), result.getClassName()),
              format("%s\nClass: %s\nTrace: %s",
                     result.getErrorDetails(),
                     result.getClassName(),
@@ -86,32 +111,54 @@ public class UniformTestResult {
              1 == result.getAge());
     }
 
-    private UniformTestResult(TestResult result) {
-        throw new RuntimeException("Base case not supported yet");
+    /**
+     * @param result The generic result to extract data from.
+     */
+    private UniformTestResult(final TestResult result) {
+        this(format("Test '%s' failed", result.getName()),
+             format("%s: %s", result.getTitle(), result.getErrorDetails()),
+             result.getErrorDetails());
     }
 
-    public String getHash(RepoDetails repo) {
+    /**
+     * @param repo The git repo details.
+     * @return A hash based on the error details and repo.
+     */
+    public String getHash(final RepoDetails repo) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-1");
             md.update(error.getBytes());
             md.update(new byte[]{0});
-            if (!isBlank(repo.getURL())) md.update(repo.getURL().getBytes());
+            if (!isBlank(repo.getURL())) {
+                md.update(repo.getURL().getBytes());
+            }
             md.update(new byte[]{0});
-            if (!isBlank(repo.getBranch())) md.update(repo.getBranch().getBytes());
+            if (!isBlank(repo.getBranch())) {
+                md.update(repo.getBranch().getBytes());
+            }
             return Hex.encodeHexString(md.digest());
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
     }
 
+    /**
+     * @return A summary of the failing test.
+     */
     public String getSummary() {
         return summary;
     }
 
+    /**
+     * @return A description of the failing test.
+     */
     public String getDescription() {
         return description;
     }
 
+    /**
+     * @return Whether the test is a new failure.
+     */
     public boolean isNew() {
         return isNew;
     }
@@ -121,7 +168,11 @@ public class UniformTestResult {
         return summary;
     }
 
-    public static Iterable<UniformTestResult> unpack(AbstractBuild build) {
+    /**
+     * @param build The current build.
+     * @return An iterable over the failed tests found.
+     */
+    public static Iterable<UniformTestResult> unpack(final AbstractBuild build) {
         Object results = build.getTestResultAction().getResult();
         if (results instanceof TapStreamResult) {
             return transform(((TapStreamResult) results).getFailedTests2(),
@@ -135,15 +186,27 @@ public class UniformTestResult {
         }
     }
 
+
+    /**
+     * A function to transform test results into uniform instances.
+     */
     static class Factory implements Function<TestResult, UniformTestResult> {
 
+        /** The workspace path. */
         private String workspace;
 
+        /**
+         * @param build The current build.
+         */
         public Factory(final AbstractBuild build) {
             workspace = build.getWorkspace().toString();
         }
 
-        public UniformTestResult apply (@Nullable TestResult result){
+        /**
+         * @param result The tets result to convert.
+         * @return A uniform representation of the result.
+         */
+        public UniformTestResult apply(@Nullable final TestResult result) {
             if (result instanceof CaseResult) {
                 return new UniformTestResult((CaseResult) result, workspace);
             } else if (result instanceof TapTestResultResult) {

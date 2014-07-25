@@ -3,13 +3,18 @@ package com.isti.jira;
 import com.atlassian.jira.rest.client.api.AuthenticationHandler;
 import com.atlassian.jira.rest.client.api.GetCreateIssueMetadataOptions;
 import com.atlassian.jira.rest.client.api.JiraRestClient;
-import com.atlassian.jira.rest.client.api.domain.*;
+import com.atlassian.jira.rest.client.api.domain.BasicProject;
+import com.atlassian.jira.rest.client.api.domain.CimIssueType;
+import com.atlassian.jira.rest.client.api.domain.CimProject;
+import com.atlassian.jira.rest.client.api.domain.Field;
+import com.atlassian.jira.rest.client.api.domain.Issue;
+import com.atlassian.jira.rest.client.api.domain.IssueType;
+import com.atlassian.jira.rest.client.api.domain.Transition;
 import com.atlassian.jira.rest.client.api.domain.input.IssueInputBuilder;
 import com.atlassian.jira.rest.client.api.domain.input.TransitionInput;
 import com.atlassian.jira.rest.client.auth.AnonymousAuthenticationHandler;
 import com.atlassian.jira.rest.client.auth.BasicHttpAuthenticationHandler;
 import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientFactory;
-import hudson.model.Run;
 
 import java.io.IOException;
 import java.net.URI;
@@ -17,13 +22,11 @@ import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Objects;
 
 import static com.isti.jira.Defaults.Key;
 import static java.lang.String.format;
 import static java.util.Collections.singletonList;
 import static org.apache.commons.lang.StringUtils.isBlank;
-import static org.apache.commons.lang.StringUtils.isEmpty;
 
 
 /**
@@ -36,14 +39,17 @@ import static org.apache.commons.lang.StringUtils.isEmpty;
  */
 public final class JiraClient {
 
-    public static String CATS_REPOSITORY = "CATS Repository";
+    /** This field must be added to JIRA to store the git repo. */
+    public static final String CATS_REPOSITORY = "CATS Repository";
 
-    public static String CATS_BRANCH = "CATS Branch";
+    /** This field must be added to JIRA to store the git branch. */
+    public static final String CATS_BRANCH = "CATS Branch";
 
-    public static String CATS_HASH = "CATS Hash";
+    /** This field must be added to JIRA to store the hash used to identify issues. */
+    public static final String CATS_HASH = "CATS Hash";
 
     /**
-     * Allo anonymous connectinos (possible but useless)
+     * Allow anonymous connections (possible but useless).
      */
     public static final boolean ALLOW_ANON = false;
 
@@ -57,6 +63,9 @@ public final class JiraClient {
      */
     private JiraRestClient client;
 
+    /**
+     * A cache of known fields.  Access indirectly via matchFieldName().
+     */
     private Map<String, Field> cachedFields = null;
 
     /**
@@ -153,6 +162,10 @@ public final class JiraClient {
         throw new MessageException(format("No issue type matching %s", type));
     }
 
+    /**
+     * @param fieldName The field name
+     * @return A field with the given name, if it is unique.
+     */
     private synchronized Field matchFieldName(final String fieldName) {
         if (null == cachedFields) {
             cachedFields = new HashMap<String, Field>();
@@ -178,6 +191,8 @@ public final class JiraClient {
      *
      * @param project The project name.
      * @param issueType The issue type.
+     * @param repo The git repository details.
+     * @param result Details of the test failure.
      */
     public void createIssue(final String project,
                             final String issueType,
@@ -203,6 +218,7 @@ public final class JiraClient {
      *
      * @param project The project name.
      * @param issueType The issue type.
+     * @param repo Details of the git repository.
      * @return A list of unresolved issues that match thr project and type.
      */
     public Iterable<Issue> listUnresolvedIssues(final String project,
@@ -215,9 +231,13 @@ public final class JiraClient {
                 format("project=\"%s\" and %s=currentUser() and issuetype=\"%s\" and resolution=\"unresolved\"",
                         p, role, type.getName()));
         String url = DEFAULTS.withDefault(Key.repository, repo.getURL(), true);
-        if (! isBlank(url)) jsql.append(format(" and %s=\"%s\"", CATS_REPOSITORY, url));
+        if (!isBlank(url)) {
+            jsql.append(format(" and %s=\"%s\"", CATS_REPOSITORY, url));
+        }
         String branch = DEFAULTS.withDefault(Key.branch, repo.getBranch(), true);
-        if (! isBlank(branch)) jsql.append(format(" and %s=\"%s\"", CATS_BRANCH, branch));
+        if (!isBlank(branch)) {
+            jsql.append(format(" and %s=\"%s\"", CATS_BRANCH, branch));
+        }
         return client.getSearchClient().searchJql(jsql.toString()).claim().getIssues();
     }
 

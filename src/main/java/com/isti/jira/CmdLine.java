@@ -15,6 +15,7 @@ import io.airlift.command.OptionType;
 import java.net.URI;
 
 import static java.lang.String.format;
+import static JiraTestResultReporter.JiraReporter.HASH_FIELD;
 
 
 /**
@@ -87,6 +88,28 @@ public final class CmdLine {
     }
 
     /**
+     * Add further command line arguments for the repo.
+     */
+    private static class GitConnection extends Connection {
+
+        /** Git repository. */
+        @Option(type = OptionType.GLOBAL, name = "-r", description = "Git repository")
+        private String repo;
+
+        /** Git branch. */
+        @Option(type = OptionType.GLOBAL, name = "-b", description = "Git branch")
+        private String branch;
+
+        /**
+         * @return Repository details taken from the command line.
+         */
+        public RepoDetails getRepo() {
+            return new RepoDetails(repo, branch);
+        }
+
+    }
+
+    /**
      * The command to list default settings from the global properties file.
      */
     @Command(name = "list-defaults", description = "List default settings")
@@ -153,7 +176,7 @@ public final class CmdLine {
      * Command to create a new issue.
      */
     @Command(name = "create-issue", description = "Create a new issue")
-    public static class CreateIssue extends Connection implements Runnable {
+    public static class CreateIssue extends GitConnection implements Runnable {
 
         /** Project from the command line. */
         @Option(name = "-p", description = "Project ID")
@@ -175,15 +198,18 @@ public final class CmdLine {
          * Run the command.
          */
         public final void run() {
+            String title = DEFAULTS.withDefault(Defaults.Key.summary, summary, false);
+            RepoDetails repo = getRepo();
+            UniformTestResult result = new UniformTestResult(title, description);
+            String hash = result.getHash(repo);
             JiraClient client = getClient();
             try {
-                String title = DEFAULTS.withDefault(Defaults.Key.summary, summary, false);
-                for (Issue known: client.listUnresolvedIssues(project, type)) {
-                    if (title == known.getSummary()) {
+                for (Issue known: client.listUnresolvedIssues(project, type, repo)) {
+                    if (hash.equals(known.getFieldByName(HASH_FIELD).toString())) {
                         throw new MessageException("Issue already exists");
                     }
                 }
-                client.createIssue(project, type, title, description);
+                client.createIssue(project, type, repo, new UniformTestResult(title, description));
             } finally {
                 client.close();
             }
@@ -195,7 +221,7 @@ public final class CmdLine {
      * The command to list unresolved issues for a given project.
      */
     @Command(name = "list-unresolved-issues", description = "List unresolved issues for a project")
-    public static class ListUnresolvedIssues extends Connection implements Runnable {
+    public static class ListUnresolvedIssues extends GitConnection implements Runnable {
 
         /** Project from the command line. */
         @Option(name = "-p", description = "Project ID")
@@ -209,9 +235,10 @@ public final class CmdLine {
          * Run the command.
          */
         public final void run() {
+            RepoDetails repo = getRepo();
             JiraClient client = getClient();
             try {
-                for (Issue issue : client.listUnresolvedIssues(project, type)) {
+                for (Issue issue : client.listUnresolvedIssues(project, type, repo)) {
                     System.out.println(formatIssue(issue));
                 }
             } finally {

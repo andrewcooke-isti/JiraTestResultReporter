@@ -1,7 +1,11 @@
 package JiraTestResultReporter;
 
 import com.atlassian.jira.rest.client.api.domain.Issue;
-import com.isti.jira.*;
+import com.isti.jira.Defaults;
+import com.isti.jira.JiraClient;
+import com.isti.jira.Logger;
+import com.isti.jira.RepoDetails;
+import com.isti.jira.UniformTestResult;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
@@ -12,12 +16,10 @@ import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
 import hudson.tasks.junit.CaseResult;
-import hudson.tasks.test.TestResult;
 import hudson.util.FormValidation;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
-import java.io.PrintStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashSet;
@@ -52,7 +54,7 @@ public final class JiraReporter extends Notifier {
     private final String pDebug = format("%s [DEBUG]", PLUGIN_NAME);
 
     private static final Defaults DEFAULTS = new Defaults();
-    private static final String HASH_FIELD = "CATS Hash";
+    public static final String HASH_FIELD = "CATS Hash";
 
     // THESE ARGUMENTS MUST MATCH THE ATTRIBUTE NAMES OR THE PLUGIN DOESN'T WORK (field values set by name afaict)
     @DataBoundConstructor
