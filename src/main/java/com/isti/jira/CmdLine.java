@@ -287,7 +287,7 @@ public final class CmdLine {
      * Command to create a new issue.
      */
     @Command(name = "close-issue", description = "Close an unresolved issue")
-    public static class CloseIssue extends Connection implements Runnable {
+    public static class CloseIssue extends GitConnection implements Runnable {
 
         /** Project from the command line. */
         @Option(name = "-p", description = "Project ID")
@@ -311,7 +311,7 @@ public final class CmdLine {
         public final void run() {
             JiraClient client = getClient();
             try {
-                client.closeIssue(project, type, id, transition);
+                client.closeIssue(project, type, getRepo(), id, transition);
             } finally {
                 client.close();
             }

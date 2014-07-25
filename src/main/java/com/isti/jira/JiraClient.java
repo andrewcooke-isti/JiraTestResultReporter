@@ -301,14 +301,16 @@ public final class JiraClient {
      *
      * @param project The project name.
      * @param issueType The issue type.
+     * @param repo The git repository details.
      * @param issueId The issue ID.
      * @param transitionName The name of the transition.
      */
     public void closeIssue(final String project,
                            final String issueType,
+                           final RepoDetails repo,
                            final Long issueId,
                            final String transitionName) {
-        Issue issue = matchIssue(issueId, listUnresolvedIssues(project, issueType));
+        Issue issue = matchIssue(issueId, listUnresolvedIssues(project, issueType, repo));
         closeIssue(issue, transitionName);
     }
 
