@@ -93,7 +93,7 @@ public final class JiraReporter extends Notifier {
 
         Iterable<UniformTestResult> failedTests = unpack(build, logger);
         printFailedTests(logger, failedTests);
-        RepoDetails repo = new RepoDetails(build, logger);
+        RepoDetails repo = new RepoDetails(build);
         logger.debug("Repo details: %s", repo);
 
         // create each time since it's not clear how to close on Jenkins shutdown
