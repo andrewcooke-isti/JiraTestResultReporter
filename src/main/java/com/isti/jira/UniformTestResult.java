@@ -17,6 +17,7 @@ import java.security.NoSuchAlgorithmException;
 import static com.google.common.collect.Iterables.transform;
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isBlank;
+import static org.apache.commons.lang.StringUtils.remove;
 
 
 /**
@@ -91,17 +92,18 @@ public final class UniformTestResult {
     /**
      * @param result The TAP result to extract data from.
      */
-    private UniformTestResult(final TapTestResultResult result) {
+    private UniformTestResult(final TapTestResultResult result, final Logger logger) {
         this(format("Test '%s' failed", result.getName()),
              format("%s: %s", result.getTitle(), result.getErrorDetails()),
              result.getErrorDetails());
+        logger.debug("TAP: %s", this);
     }
 
     /**
      * @param result The CaseResult to extract data from.
      * @param workspace Workspace path (used to fix stack traces).
      */
-    private UniformTestResult(final CaseResult result, final String workspace) {
+    private UniformTestResult(final CaseResult result, final String workspace, final Logger logger) {
         this(format("Test '%s' failed in %s", result.getName(), result.getClassName()),
              format("%s\nClass: %s\nTrace: %s",
                     result.getErrorDetails(),
@@ -109,15 +111,17 @@ public final class UniformTestResult {
                     result.getErrorStackTrace().replace(workspace, "")),
              result.getErrorDetails(),
              1 == result.getAge());
+        logger.debug("Case: %s", this);
     }
 
     /**
      * @param result The generic result to extract data from.
      */
-    private UniformTestResult(final TestResult result) {
+    private UniformTestResult(final TestResult result, final Logger logger) {
         this(format("Test '%s' failed", result.getName()),
              format("%s: %s", result.getTitle(), result.getErrorDetails()),
              result.getErrorDetails());
+        logger.debug("Generic: %s", this);
     }
 
     /**
@@ -172,14 +176,19 @@ public final class UniformTestResult {
      * @param build The current build.
      * @return An iterable over the failed tests found.
      */
-    public static Iterable<UniformTestResult> unpack(final AbstractBuild build) {
+    public static Iterable<UniformTestResult> unpack(
+            final AbstractBuild build,
+            final Logger logger) {
         Object results = build.getTestResultAction().getResult();
+        logger.debug("Unpacking %s", results.getClass().getSimpleName());
         if (results instanceof TapStreamResult) {
+            logger.debug("TAP: %d", ((TapStreamResult) results).getFailedTests2().size());
             return transform(((TapStreamResult) results).getFailedTests2(),
-                    new Factory(build));
+                    new Factory(build, logger));
         } else if (results instanceof MetaTabulatedResult) {
+            logger.debug("Meta: %d", ((MetaTabulatedResult) results).getFailedTests().size());
             return transform(((MetaTabulatedResult) results).getFailedTests(),
-                    new Factory(build));
+                    new Factory(build, logger));
         } else {
             throw new RuntimeException(format("Cannot handle results of type %s",
                     results.getClass().getSimpleName()));
@@ -195,11 +204,14 @@ public final class UniformTestResult {
         /** The workspace path. */
         private String workspace;
 
+        private Logger logger;
+
         /**
          * @param build The current build.
          */
-        public Factory(final AbstractBuild build) {
+        public Factory(final AbstractBuild build, final Logger logger) {
             workspace = build.getWorkspace().toString();
+            this.logger = logger;
         }
 
         /**
@@ -207,12 +219,13 @@ public final class UniformTestResult {
          * @return A uniform representation of the result.
          */
         public UniformTestResult apply(@Nullable final TestResult result) {
+            logger.debug(result.getClass().getSimpleName());
             if (result instanceof CaseResult) {
-                return new UniformTestResult((CaseResult) result, workspace);
+                return new UniformTestResult((CaseResult) result, workspace, logger);
             } else if (result instanceof TapTestResultResult) {
-                return new UniformTestResult((TapTestResultResult) result);
+                return new UniformTestResult((TapTestResultResult) result, logger);
             } else {
-                return new UniformTestResult(result);
+                return new UniformTestResult(result, logger);
             }
         }
     }

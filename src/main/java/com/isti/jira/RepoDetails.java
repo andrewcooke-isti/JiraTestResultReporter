@@ -31,27 +31,19 @@ public final class RepoDetails {
     /**
      * @param build The current build.
      */
-    public RepoDetails(final AbstractBuild build, final Logger log) {
-        this(vars(build, log).get("GIT_URL"),
-             vars(build, null).get("GIT_BRANCH"));
+    public RepoDetails(final AbstractBuild build) {
+        this(vars(build).get("GIT_URL"),
+             vars(build).get("GIT_BRANCH"));
     }
 
     /**
      * @param build The current build.
      * @return A map of environment variables.
      */
-    private static Map<String, String> vars(final AbstractBuild build, final Logger log) {
+    private static Map<String, String> vars(final AbstractBuild build) {
 //        return build.getBuildVariables();
         try {
-            Map<String, String> vars = build.getEnvironment(null);
-            if (null != log) {
-                log.debug("Vars %d", vars.size());
-                for (String name: vars.keySet()) {
-                    log.debug("%s: %s", name, vars.get(name));
-                }
-                log.debug("-----------");
-            }
-            return vars;
+            return build.getEnvironment(null);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

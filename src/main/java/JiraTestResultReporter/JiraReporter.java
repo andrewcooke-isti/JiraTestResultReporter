@@ -91,7 +91,7 @@ public final class JiraReporter extends Notifier {
         logger.info("Examining test results...");
         logger.debug("Build result is %s", build.getResult().toString());
 
-        Iterable<UniformTestResult> failedTests = unpack(build);
+        Iterable<UniformTestResult> failedTests = unpack(build, logger);
         printFailedTests(logger, failedTests);
         RepoDetails repo = new RepoDetails(build, logger);
         logger.debug("Repo details: %s", repo);
