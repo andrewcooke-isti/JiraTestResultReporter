@@ -5,6 +5,8 @@ import hudson.model.AbstractBuild;
 import java.io.IOException;
 import java.util.Map;
 
+import static java.lang.String.format;
+
 
 /**
  * Encapsulate what we know about the git repository.
@@ -67,6 +69,11 @@ public final class RepoDetails {
      */
     public String getBranch() {
         return branch;
+    }
+
+    @Override
+    public String toString() {
+        return format("%s [%s]", URL, branch);
     }
 
 }

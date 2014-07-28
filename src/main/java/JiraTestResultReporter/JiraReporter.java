@@ -94,6 +94,7 @@ public final class JiraReporter extends Notifier {
         Iterable<UniformTestResult> failedTests = unpack(build);
         printFailedTests(logger, failedTests);
         RepoDetails repo = new RepoDetails(build, logger);
+        logger.debug("Repo details: %s", repo);
 
         // create each time since it's not clear how to close on Jenkins shutdown
         // (and the overhead once per test isn't an issue anyway).
@@ -136,13 +137,16 @@ public final class JiraReporter extends Notifier {
 
         Set<String> known = new HashSet<String>();
         for (Issue issue: existingIssues) {
-            known.add(issue.getFieldByName(CATS_HASH).getValue().toString());
+            String hash = issue.getFieldByName(CATS_HASH).getValue().toString();
+            known.add(hash);
+            logger.debug("Known: %s", hash);
         }
 
         for (UniformTestResult result : failedTests) {
 
             if (known.contains(result.getHash(repo))) {
                 logger.info("Jira already contains '%s'", result);
+                logger.info("Hash %s", result.getHash(repo));
 
             } else if (result.isNew() || (this.createAllFlag)) {
                 logger.info("Creating issue in project %s at URL %s",
