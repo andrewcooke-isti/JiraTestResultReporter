@@ -25,6 +25,7 @@ import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
 
+import static com.google.common.collect.Lists.newArrayList;
 import static com.isti.jira.Defaults.Key;
 import static com.isti.jira.JiraClient.ALLOW_ANON;
 import static com.isti.jira.JiraClient.CATS_HASH;
@@ -91,7 +92,8 @@ public final class JiraReporter extends Notifier {
         logger.info("Examining test results...");
         logger.debug("Build result is %s", build.getResult().toString());
 
-        Iterable<UniformTestResult> failedTests = unpack(build, logger);
+        // create a list here to avoid repeatedly running constructors on each use
+        Iterable<UniformTestResult> failedTests = newArrayList(unpack(build, logger));
         printFailedTests(logger, failedTests);
         RepoDetails repo = new RepoDetails(build);
         logger.debug("Repo details: %s", repo);
