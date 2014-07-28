@@ -77,7 +77,7 @@ public final class RepoDetails {
 
     @Override
     public String toString() {
-        return format("%s [%s]", URL, branch);
+        return format("%s [%s] %s", URL, branch, commit);
     }
 
 }
