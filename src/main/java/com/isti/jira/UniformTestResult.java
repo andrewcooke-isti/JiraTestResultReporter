@@ -17,7 +17,6 @@ import java.security.NoSuchAlgorithmException;
 import static com.google.common.collect.Iterables.transform;
 import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isBlank;
-import static org.apache.commons.lang.StringUtils.remove;
 
 
 /**
@@ -91,6 +90,7 @@ public final class UniformTestResult {
 
     /**
      * @param result The TAP result to extract data from.
+     * @param logger To record class data for debugging.
      */
     private UniformTestResult(final TapTestResultResult result, final Logger logger) {
         this(format("Test '%s' failed", result.getName()),
@@ -102,6 +102,7 @@ public final class UniformTestResult {
     /**
      * @param result The CaseResult to extract data from.
      * @param workspace Workspace path (used to fix stack traces).
+     * @param logger To record class data for debugging.
      */
     private UniformTestResult(final CaseResult result, final String workspace, final Logger logger) {
         this(format("Test '%s' failed in %s", result.getName(), result.getClassName()),
@@ -116,6 +117,7 @@ public final class UniformTestResult {
 
     /**
      * @param result The generic result to extract data from.
+     * @param logger To record class data for debugging.
      */
     private UniformTestResult(final TestResult result, final Logger logger) {
         this(format("Test '%s' failed", result.getName()),
@@ -175,6 +177,7 @@ public final class UniformTestResult {
     /**
      * @param build The current build.
      * @return An iterable over the failed tests found.
+     * @param logger To record class data for debugging.
      */
     public static Iterable<UniformTestResult> unpack(
             final AbstractBuild build,
@@ -204,10 +207,12 @@ public final class UniformTestResult {
         /** The workspace path. */
         private String workspace;
 
+        /** For logging class types (TAP is weird). */
         private Logger logger;
 
         /**
          * @param build The current build.
+         * @param logger To record class data for debugging.
          */
         public Factory(final AbstractBuild build, final Logger logger) {
             workspace = build.getWorkspace().toString();

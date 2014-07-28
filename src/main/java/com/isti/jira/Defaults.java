@@ -8,7 +8,6 @@ import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
 
-import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isBlank;
 
 

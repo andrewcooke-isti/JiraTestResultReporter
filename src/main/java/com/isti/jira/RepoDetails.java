@@ -2,7 +2,6 @@ package com.isti.jira;
 
 import hudson.model.AbstractBuild;
 
-import java.io.IOException;
 import java.util.Map;
 
 import static java.lang.String.format;
@@ -25,6 +24,7 @@ public final class RepoDetails {
     /**
      * @param URL The git repository URL.
      * @param branch The git branch.
+     * @param commit The git commit.
      */
     public RepoDetails(final String URL, final String branch, final String commit) {
         this.URL = URL;
