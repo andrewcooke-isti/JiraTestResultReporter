@@ -19,13 +19,17 @@ public final class RepoDetails {
     /** The git branch. */
     private String branch;
 
+    /** The git commit. */
+    private String commit;
+
     /**
      * @param URL The git repository URL.
      * @param branch The git branch.
      */
-    public RepoDetails(final String URL, final String branch) {
+    public RepoDetails(final String URL, final String branch, final String commit) {
         this.URL = URL;
         this.branch = branch;
+        this.commit = commit;
     }
 
     /**
@@ -33,7 +37,8 @@ public final class RepoDetails {
      */
     public RepoDetails(final AbstractBuild build) {
         this(vars(build).get("GIT_URL"),
-             vars(build).get("GIT_BRANCH"));
+             vars(build).get("GIT_BRANCH"),
+             vars(build).get("GIT_COMMIT"));
     }
 
     /**
@@ -61,6 +66,13 @@ public final class RepoDetails {
      */
     public String getBranch() {
         return branch;
+    }
+
+    /**
+     * @return The git commit.
+     */
+    public String getCommit() {
+        return commit;
     }
 
     @Override

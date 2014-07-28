@@ -48,6 +48,9 @@ public final class JiraClient {
     /** This field must be added to JIRA to store the hash used to identify issues. */
     public static final String CATS_HASH = "CATS Hash";
 
+    /** This field must be added to JIRA to store the git commit under test. */
+    public static final String CATS_COMMIT = "CATS Commit";
+
     /**
      * Allow anonymous connections (possible but useless).
      */
@@ -209,6 +212,9 @@ public final class JiraClient {
         issueBuilder.setFieldValue(
                 matchFieldName(CATS_BRANCH).getId(),
                 DEFAULTS.withDefault(Key.branch, repo.getBranch(), true));
+        issueBuilder.setFieldValue(
+                matchFieldName(CATS_COMMIT).getId(),
+                DEFAULTS.withDefault(Key.branch, repo.getCommit(), true));
         issueBuilder.setFieldValue(matchFieldName(CATS_HASH).getId(), result.getHash(repo));
         client.getIssueClient().createIssue(issueBuilder.build()).claim();
     }

@@ -100,11 +100,15 @@ public final class CmdLine {
         @Option(name = "-b", description = "Git branch")
         private String branch;
 
+        /** Git commit from the command line.. */
+        @Option(name = "-c", description = "Git commit")
+        private String commit;
+
         /**
          * @return Repository details taken from the command line.
          */
         public RepoDetails getRepo() {
-            return new RepoDetails(repo, branch);
+            return new RepoDetails(repo, branch, commit);
         }
 
     }
