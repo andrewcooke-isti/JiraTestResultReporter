@@ -173,16 +173,19 @@ public final class JiraReporter extends Notifier {
             known.add(result.getHash(repo));
         }
 
+        int count = 0;
         // run through the open issues and see which are no longer present
         for (Issue issue: existingIssues) {
             String hash = issue.getFieldByName(CATS_HASH).getValue().toString();
             if (known.contains(hash)) {
                 logger.info("Keeping: '%s'", issue.getSummary());
+                count++;
             } else {
                 logger.info("Closing: '%s'", issue.getSummary());
                 client.closeIssue(issue, transition);
             }
         }
+        logger.debug("Remaining issues: %d", count);
     }
 
     @Override
