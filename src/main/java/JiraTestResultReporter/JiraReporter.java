@@ -144,17 +144,23 @@ public final class JiraReporter extends Notifier {
             logger.debug("Known: %s", hash);
         }
 
+        Set<String> duplicates = new HashSet<String>();
         for (UniformTestResult result : failedTests) {
-
-            if (known.contains(result.getHash(repo))) {
+            String hash = result.getHash(repo);
+            
+            if (known.contains(hash)) {
                 logger.info("Jira already contains '%s'", result);
                 logger.info("Hash %s", result.getHash(repo));
+
+            } else if (duplicates.contains(hash)) {
+                logger.info("Ignoring duplicate %s", result);
 
             } else if (result.isNew() || (this.createAllFlag)) {
                 logger.info("Creating issue in project %s at URL %s",
                             DEFAULTS.withDefault(Key.project, projectKey),
                             DEFAULTS.withDefault(Key.url, serverUrl));
                 client.createIssue(projectKey, issueType, repo, result);
+                duplicates.add(hash);
 
             } else {
                 logger.info("This issue is old; not reporting (select the 'create all' checkbox to force)");
@@ -185,7 +191,7 @@ public final class JiraReporter extends Notifier {
                 client.closeIssue(issue, transition);
             }
         }
-        logger.debug("Remaining issues: %d", count);
+        logger.debug("Pre-existing issues: %d", count);
     }
 
     @Override
