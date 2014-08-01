@@ -29,6 +29,14 @@ JiraTestResultReporter](https://github.com/maplesteve/JiraTestResultReporter)
   the configuration for each test and allows access from the command
   line tool.
 
+## UnFeatures
+
+The plugin currently assume sthat git is used, and stores information in
+four Jira fields - "CATS repository", "CATS branch", "CATS hash" and
+"CATS commit".
+
+## Configuration
+
   A typical configuration file might look like:
 
 ```
