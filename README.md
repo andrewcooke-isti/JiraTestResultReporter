@@ -31,7 +31,7 @@ JiraTestResultReporter](https://github.com/maplesteve/JiraTestResultReporter)
 
 ## UnFeatures
 
-The plugin currently assume sthat git is used, and stores information in
+The plugin currently assumes that git is used, and stores information in
 four Jira fields - "CATS repository", "CATS branch", "CATS hash" and
 "CATS commit".
 
