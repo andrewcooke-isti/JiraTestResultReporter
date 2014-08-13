@@ -184,7 +184,7 @@ public final class JiraClient {
                 return cachedFields.get(fieldName);
             }
         } else {
-            throw new RuntimeException(format("Unknown field name '%s'", fieldName));
+            throw new RuntimeException(format("Unknown field name '%s' (was this field added to Jira?)", fieldName));
         }
     }
 
