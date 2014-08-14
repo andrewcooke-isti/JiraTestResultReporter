@@ -255,8 +255,10 @@ public final class CmdLine {
          * @return Something we can print that's useful and not terribly ugly.
          */
         private static String formatIssue(final Issue issue) {
-            return format("\n[%d] %s\n%s\n%s\n",
-                    issue.getId(), issue.getSummary(), issue.getDescription(), issue.getTransitionsUri());
+            return format("\nID: %d\nSummary: %s\nDescription: %s\nURI: %s\n",
+                    issue.getId(), issue.getSummary(),
+                    issue.getDescription().replace("\n", "\n "),
+                    issue.getTransitionsUri());
         }
 
     }
