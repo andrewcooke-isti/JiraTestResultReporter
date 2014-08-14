@@ -32,11 +32,11 @@ public class Defaults {
         user("cats"),
         /** The password to use in a connection. */
         password,
-        /** The URL to connect to. */
-        url("http://localhost:8081"),
+        /** The URL to connect to (standard install). */
+        url("http://its.ctbto.org"),
         /** The project to create issues for (usually not supplied). */
         project,
-        /** The issue type to create. */
+        /** The issue type to create (bug is Jira Classic). */
         issue_type("bug"),
         /** The role that "owns" an issue. */
         role("reporter"),
@@ -44,8 +44,8 @@ public class Defaults {
         summary,
         /** A description of the issue (usually not supplied). */
         description,
-        /** The transition needed to resolve the issue. */
-        transition("done"),
+        /** The transition needed to resolve the issue (CLose issue is Jira Classic). */
+        transition("Close issue"),
         /** The repository containing the code being tested. */
         repository,
         /** The repo branch containing the code being tested. */
@@ -133,17 +133,13 @@ public class Defaults {
         Set<String> known = new HashSet<String>();
         for (Key key: Key.values()) {
             String value = withDefault(key, null, true);
-            if (properties.containsKey(key.name())) {
-                out.printf("%s: %s (%s)%n", key.name(), value, properties.getProperty(key.name()));
-            } else {
-                out.printf("%s: %s%n", key.name(), value);
-            }
+            out.printf("%s: %s%n", key.name(), value);
             known.add(key.name());
         }
         for (String name: properties.stringPropertyNames()) {
             if (!known.contains(name)) {
                 String value = properties.getProperty(name);
-                out.printf("%s (unknown): %s%n", name, value);
+                out.printf("%s (unexpected name): %s%n", name, value);
             }
         }
     }
