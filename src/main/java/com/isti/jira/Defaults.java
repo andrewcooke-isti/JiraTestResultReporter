@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
 
+import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isBlank;
 
 
@@ -86,10 +87,10 @@ public class Defaults {
      * @param key The name of the value.
      * @param value The initial value (may be null).
      * @param nullOk If true then a final null value does not raise an exception.
-     * @return A value with defaults applied.
+     * @return A trimmed value with defaults applied.
      */
     public final String withDefault(final Key key, final String value, final boolean nullOk) {
-        String result = value == null ? value : value.trim();
+        String result = value;
         if (isBlank(result) && getProperties().containsKey(key.name())) {
             result = getProperties().getProperty(key.name());
         }
@@ -97,7 +98,10 @@ public class Defaults {
             result = key.deflt;
         }
         if (isBlank(result) && !nullOk) {
-            throw new MissingArgumentException(key.name());
+            throw new RuntimeException(format("No value for parameter %s", key.name()));
+        }
+        if (result != null) {
+            result = result.trim();
         }
         return result;
     }

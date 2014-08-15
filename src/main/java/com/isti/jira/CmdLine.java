@@ -4,8 +4,6 @@ import com.atlassian.jira.rest.client.api.domain.BasicProject;
 import com.atlassian.jira.rest.client.api.domain.CimIssueType;
 import com.atlassian.jira.rest.client.api.domain.Issue;
 import com.atlassian.jira.rest.client.api.domain.Transition;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.UniformInterfaceException;
 import io.airlift.command.Cli;
 import io.airlift.command.Command;
 import io.airlift.command.Help;
@@ -14,8 +12,9 @@ import io.airlift.command.OptionType;
 
 import java.net.URI;
 
-import static java.lang.String.format;
 import static com.isti.jira.JiraClient.CATS_HASH;
+import static java.lang.String.format;
+import static java.lang.System.exit;
 
 
 /**
@@ -35,7 +34,8 @@ public final class CmdLine {
     /**
      * Hide constructor for utility class.
      */
-    private CmdLine() { }
+    private CmdLine() {
+    }
 
     /**
      * Invoke the utility from the command line.
@@ -49,32 +49,73 @@ public final class CmdLine {
                 .withDefaultCommand(Help.class)
                 .withCommands(Help.class, ListDefaults.class, ListProjects.class, ListIssueTypes.class,
                         CreateIssue.class, ListUnresolvedIssues.class, ListTransitions.class, CloseIssue.class);
-        Cli<Runnable> parser = builder.build();
+        // clunky because we need to handle *only* the parser errors.
+        Runnable cmd = null;
         try {
-            parser.parse(args).run();
+            cmd = builder.build().parse(args);
         } catch (RuntimeException e) {
-            if (handleException(e)) {
-                System.exit(1);
-            } else {
-                throw e;
+            System.err.println(format("ERROR: %s", e.getMessage()));
+            exit(1);
+        }
+        cmd.run();
+    }
+
+
+    /**
+     * Handle errors verbosely if required.
+     */
+    private abstract static class VerboseCommand implements Runnable {
+
+        /**
+         * Verbose flag from the command line.
+         */
+        @Option(type = OptionType.GLOBAL, name = "-v", description = "Show error details")
+        private Boolean verbose = false;
+
+        /**
+         * Subclasses should override this to implement the command.
+         */
+        protected abstract void doCommand();
+
+        /**
+         * Run the command and display eny error.
+         */
+        public void run() {
+            try {
+                doCommand();
+            } catch (RuntimeException e) {
+                if (verbose) {
+                    throw e;
+                } else {
+                    System.err.println(format("ERROR: %s", e.getMessage()));
+                    exit(1);
+                }
             }
         }
+
     }
+
 
     /**
      * Encapsulate the connection command line arguments; implementation handled by jiraClient.
      */
-    private static class Connection {
+    private abstract static class Connection extends VerboseCommand {
 
-        /** Username from the command line. */
+        /**
+         * Username from the command line.
+         */
         @Option(type = OptionType.GLOBAL, name = "-U", description = "User to connect as")
         private String user;
 
-        /** Password from the command line. */
+        /**
+         * Password from the command line.
+         */
         @Option(type = OptionType.GLOBAL, name = "-P", description = "Password to connect with")
         private String password;
 
-        /** URL to connect to from the command line. */
+        /**
+         * URL to connect to from the command line.
+         */
         @Option(type = OptionType.GLOBAL, name = "-H", description = "Jira URL")
         private String url;
 
@@ -90,17 +131,23 @@ public final class CmdLine {
     /**
      * Add further command line arguments for the repo.
      */
-    private static class GitConnection extends Connection {
+    private abstract static class GitConnection extends Connection {
 
-        /** Git repository. */
+        /**
+         * Git repository.
+         */
         @Option(name = "-r", description = "Git repository")
         private String repo;
 
-        /** Git branch. */
+        /**
+         * Git branch.
+         */
         @Option(name = "-b", description = "Git branch")
         private String branch;
 
-        /** Git commit from the command line.. */
+        /**
+         * Git commit from the command line..
+         */
         @Option(name = "-c", description = "Git commit")
         private String commit;
 
@@ -117,12 +164,12 @@ public final class CmdLine {
      * The command to list default settings from the global properties file.
      */
     @Command(name = "list-defaults", description = "List default settings")
-    public static class ListDefaults implements Runnable {
+    public static class ListDefaults extends VerboseCommand {
 
         /**
          * Run the command.
          */
-        public final void run() {
+        public final void doCommand() {
             new Defaults().listTo(System.err);
         }
 
@@ -132,12 +179,12 @@ public final class CmdLine {
      * The command to list projects.
      */
     @Command(name = "list-projects", description = "List Jira projects")
-    public static class ListProjects extends Connection implements Runnable {
+    public static class ListProjects extends Connection {
 
         /**
          * Run the command.
          */
-        public final void run() {
+        public final void doCommand() {
             JiraClient client = getClient();
             try {
                 for (BasicProject project : client.listProjects()) {
@@ -154,16 +201,18 @@ public final class CmdLine {
      * The command to list issue types for a given project.
      */
     @Command(name = "list-issue-types", description = "List issue types for a project")
-    public static class ListIssueTypes extends Connection implements Runnable {
+    public static class ListIssueTypes extends Connection {
 
-        /** Project from the command line. */
+        /**
+         * Project from the command line.
+         */
         @Option(name = "-p", description = "Project ID")
         private String project;
 
         /**
          * Run the command.
          */
-        public final void run() {
+        public final void doCommand() {
             JiraClient client = getClient();
             try {
                 for (CimIssueType type : client.listIssueTypes(project)) {
@@ -180,37 +229,45 @@ public final class CmdLine {
      * Command to create a new issue.
      */
     @Command(name = "create-issue", description = "Create a new issue")
-    public static class CreateIssue extends GitConnection implements Runnable {
+    public static class CreateIssue extends GitConnection {
 
-        /** Project from the command line. */
+        /**
+         * Project from the command line.
+         */
         @Option(name = "-p", description = "Project ID")
         private String project;
 
-        /** Issue type from the command line. */
+        /**
+         * Issue type from the command line.
+         */
         @Option(name = "-t", description = "Issue type")
         private String type;
 
-        /** Summary from the command line. */
+        /**
+         * Summary from the command line.
+         */
         @Option(name = "-s", description = "Summary")
         private String summary;
 
-        /** Description from the command line. */
+        /**
+         * Description from the command line.
+         */
         @Option(name = "-d", description = "Description")
         private String description;
 
         /**
          * Run the command.
          */
-        public final void run() {
+        public final void doCommand() {
             String title = DEFAULTS.withDefault(Defaults.Key.summary, summary, false);
             RepoDetails repo = getRepo();
             UniformTestResult result = new UniformTestResult(title, description);
             String hash = result.getHash(repo);
             JiraClient client = getClient();
             try {
-                for (Issue known: client.listUnresolvedIssues(project, type, repo)) {
+                for (Issue known : client.listUnresolvedIssues(project, type, repo)) {
                     if (hash.equals(known.getFieldByName(CATS_HASH).toString())) {
-                        throw new MessageException("Issue already exists");
+                        throw new RuntimeException("Issue already exists");
                     }
                 }
                 client.createIssue(project, type, repo, new UniformTestResult(title, description));
@@ -225,20 +282,24 @@ public final class CmdLine {
      * The command to list unresolved issues for a given project.
      */
     @Command(name = "list-unresolved-issues", description = "List unresolved issues for a project")
-    public static class ListUnresolvedIssues extends GitConnection implements Runnable {
+    public static class ListUnresolvedIssues extends GitConnection {
 
-        /** Project from the command line. */
+        /**
+         * Project from the command line.
+         */
         @Option(name = "-p", description = "Project ID")
         private String project;
 
-        /** Issue type from the command line. */
+        /**
+         * Issue type from the command line.
+         */
         @Option(name = "-t", description = "Issue type")
         private String type;
 
         /**
          * Run the command.
          */
-        public final void run() {
+        public final void doCommand() {
             RepoDetails repo = getRepo();
             JiraClient client = getClient();
             try {
@@ -267,16 +328,18 @@ public final class CmdLine {
      * The command to list transitions for a given URI (the URI is displayed when issues are listed).
      */
     @Command(name = "list-transitions", description = "List transitions for a given URI")
-    public static class ListTransitions extends Connection implements Runnable {
+    public static class ListTransitions extends Connection {
 
-        /** Project from the command line. */
+        /**
+         * Project from the command line.
+         */
         @Option(name = "-u", description = "Transition URI", required = true)
         private String uri;
 
         /**
          * Run the command.
          */
-        public final void run() {
+        public final void doCommand() {
             JiraClient client = getClient();
             try {
                 for (Transition transition : client.listTransitions(URI.create(uri))) {
@@ -293,28 +356,36 @@ public final class CmdLine {
      * Command to create a new issue.
      */
     @Command(name = "close-issue", description = "Close an unresolved issue")
-    public static class CloseIssue extends GitConnection implements Runnable {
+    public static class CloseIssue extends GitConnection {
 
-        /** Project from the command line. */
+        /**
+         * Project from the command line.
+         */
         @Option(name = "-p", description = "Project ID")
         private String project;
 
-        /** Issue type from the command line. */
+        /**
+         * Issue type from the command line.
+         */
         @Option(name = "-t", description = "Issue type")
         private String type;
 
-        /** Issue ID from the command line. */
+        /**
+         * Issue ID from the command line.
+         */
         @Option(name = "-i", description = "Issue ID", required = true)
         private Long id;
 
-        /** Transition from the command line. */
+        /**
+         * Transition from the command line.
+         */
         @Option(name = "-n", description = "Transition name")
         private String transition;
 
         /**
          * Run the command.
          */
-        public final void run() {
+        public final void doCommand() {
             JiraClient client = getClient();
             try {
                 client.closeIssue(project, type, getRepo(), id, transition);
@@ -323,74 +394,6 @@ public final class CmdLine {
             }
         }
 
-    }
-
-    /**
-     * Handle exceptions that arrive at the top level.  We try a variety of types until some handler returns true.
-     * If no handler at this level works, then we try the cause.  If that doesn't work we return false and the
-     * exception is likely thrown to the user.
-     *
-     * @param e The exception to handle.
-     * @return true if the expected action was taken (and the exception can be discarded).
-     */
-    private static boolean handleException(final Throwable e) {
-        // overloading is static resolution
-        if (e instanceof UniformInterfaceException && handleException((UniformInterfaceException) e)) {
-            return true;
-        }
-        if (e instanceof MissingArgumentException && handleException((MissingArgumentException) e)) {
-            return true;
-        }
-        if (e instanceof MessageException && handleException((MessageException) e)) {
-            return true;
-        }
-        return e.getCause() != null && handleException(e.getCause());
-    }
-
-    /**
-     * For missing arguments, display a message to the user.
-     *
-     * @param e The exception with details of the missing argument.
-     * @return true always.
-     */
-    private static boolean handleException(final MissingArgumentException e) {
-        System.err.println(format("%s is required", e.getMessage()));
-        return true;
-    }
-
-    /**
-     * For message exceptions, display the message.
-     *
-     * @param e The exception with a message to display.
-     * @return true always.
-     */
-    private static boolean handleException(final MessageException e) {
-        System.err.println(e.getMessage());
-        return true;
-    }
-
-    /**
-     * The UniformInterfaceException comes from the low level HTTP libraries and caontains an HTTP error code
-     * which we can interpret for the user.
-     *
-     * @param e The exception with an HTTP code.
-     * @return true if we understand the code or have an understandable cause.
-     */
-    private static boolean handleException(final UniformInterfaceException e) {
-        if (e.getResponse() != null) {
-            ClientResponse response = e.getResponse();
-            ClientResponse.Status status = response.getClientResponseStatus();
-            if (status != null) {
-                if (status.getStatusCode() == 503) {
-                    System.err.println("JIRA not available (503; not configured?)");
-                    return true;
-                } else if (status.getStatusCode() == 404) {
-                    System.err.println("JIRA doesn't have the resource (404; not configured on error in plugin?)");
-                    return true;
-                }
-            }
-        }
-        return e.getCause() != null && handleException(e.getCause());
     }
 
 }

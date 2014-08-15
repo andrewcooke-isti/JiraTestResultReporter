@@ -26,7 +26,6 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.Future;
 
 import static com.isti.jira.Defaults.Key;
 import static java.lang.String.format;
@@ -79,7 +78,7 @@ public final class JiraClient {
     /**
      * The URL to connect to (used in error messages).
      */
-    private String url;
+    private String savedUrl;
 
     /**
      * @param url The URL to connect to.
@@ -88,7 +87,7 @@ public final class JiraClient {
      */
     public JiraClient(final String url, final String user, final String password) {
         client = getClient(url, user, password);
-        this.url = url;
+        this.savedUrl = url;
     }
 
     /**
@@ -156,7 +155,7 @@ public final class JiraClient {
         if (info.hasNext()) {
             return info.next().getIssueTypes();
         } else {
-            throw new MessageException(format("Could not find project %s", p));
+            throw new RuntimeException(format("Could not find project %s", p));
         }
     }
 
@@ -174,7 +173,7 @@ public final class JiraClient {
                 return issue;
             }
         }
-        throw new MessageException(format("No issue type matching %s", type));
+        throw new RuntimeException(format("No issue type matching %s", type));
     }
 
     /**
@@ -275,7 +274,7 @@ public final class JiraClient {
                 return issue;
             }
         }
-        throw new MessageException(format("No issue matching ID %d", issueId));
+        throw new RuntimeException(format("No issue matching ID %d", issueId));
     }
 
     /**
@@ -302,7 +301,7 @@ public final class JiraClient {
                 return transition;
             }
         }
-        throw new MessageException(format("No transition matching %s", name));
+        throw new RuntimeException(format("No transition matching %s", name));
     }
 
     /**
@@ -342,7 +341,7 @@ public final class JiraClient {
      * @param <T> The type of the result from the promise.
      * @return The result from the promise.
      */
-    private <T> T claim(Promise<T> promise) {
+    private <T> T claim(final Promise<T> promise) {
         try {
             return promise.claim();
         } catch (RestClientException e) {
@@ -360,7 +359,7 @@ public final class JiraClient {
             }
         } catch (RuntimeException e) {
             if (e.getCause() instanceof UnknownHostException) {
-                throw new RuntimeException(format("Host at %s is unknown - check the Jira url", url), e);
+                throw new RuntimeException(format("Host at %s is unknown - check the Jira url", savedUrl), e);
             } else {
                 throw e;
             }
