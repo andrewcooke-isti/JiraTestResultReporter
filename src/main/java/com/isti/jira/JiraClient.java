@@ -3,6 +3,7 @@ package com.isti.jira;
 import com.atlassian.jira.rest.client.api.AuthenticationHandler;
 import com.atlassian.jira.rest.client.api.GetCreateIssueMetadataOptions;
 import com.atlassian.jira.rest.client.api.JiraRestClient;
+import com.atlassian.jira.rest.client.api.RestClientException;
 import com.atlassian.jira.rest.client.api.domain.BasicProject;
 import com.atlassian.jira.rest.client.api.domain.CimIssueType;
 import com.atlassian.jira.rest.client.api.domain.CimProject;
@@ -15,13 +16,17 @@ import com.atlassian.jira.rest.client.api.domain.input.TransitionInput;
 import com.atlassian.jira.rest.client.auth.AnonymousAuthenticationHandler;
 import com.atlassian.jira.rest.client.auth.BasicHttpAuthenticationHandler;
 import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientFactory;
+import com.atlassian.util.concurrent.Promise;
+import com.google.common.base.Optional;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.Future;
 
 import static com.isti.jira.Defaults.Key;
 import static java.lang.String.format;
@@ -72,12 +77,18 @@ public final class JiraClient {
     private Map<String, Field> cachedFields = null;
 
     /**
+     * The URL to connect to (used in error messages).
+     */
+    private String url;
+
+    /**
      * @param url The URL to connect to.
      * @param user The Jira user.
      * @param password The password to use in the connection.
      */
     public JiraClient(final String url, final String user, final String password) {
         client = getClient(url, user, password);
+        this.url = url;
     }
 
     /**
@@ -130,7 +141,7 @@ public final class JiraClient {
      * @return A list of all projects.
      */
     public Iterable<BasicProject> listProjects() {
-        return client.getProjectClient().getAllProjects().claim();
+        return claim(client.getProjectClient().getAllProjects());
     }
 
     /**
@@ -139,8 +150,9 @@ public final class JiraClient {
      */
     public Iterable<CimIssueType> listIssueTypes(final String project) {
         String p = DEFAULTS.withDefault(Key.project, project);
-        Iterator<CimProject> info = client.getIssueClient().getCreateIssueMetadata(
-                new GetCreateIssueMetadataOptions(null, null, null, singletonList(p), null)).claim().iterator();
+        Iterator<CimProject> info = claim(
+                client.getIssueClient().getCreateIssueMetadata(
+                    new GetCreateIssueMetadataOptions(null, null, null, singletonList(p), null))).iterator();
         if (info.hasNext()) {
             return info.next().getIssueTypes();
         } else {
@@ -172,7 +184,7 @@ public final class JiraClient {
     private synchronized Field matchFieldName(final String fieldName) {
         if (null == cachedFields) {
             cachedFields = new HashMap<String, Field>();
-            for (Field field: client.getMetadataClient().getFields().claim()) {
+            for (Field field: claim(client.getMetadataClient().getFields())) {
                 // use null to indicate duplicates
                 cachedFields.put(field.getName(), cachedFields.containsKey(field.getName()) ? null : field);
             }
@@ -216,7 +228,7 @@ public final class JiraClient {
                 matchFieldName(CATS_COMMIT).getId(),
                 DEFAULTS.withDefault(Key.branch, repo.getCommit(), true));
         issueBuilder.setFieldValue(matchFieldName(CATS_HASH).getId(), result.getHash(repo));
-        client.getIssueClient().createIssue(issueBuilder.build()).claim();
+        claim(client.getIssueClient().createIssue(issueBuilder.build()));
     }
 
     /**
@@ -247,7 +259,7 @@ public final class JiraClient {
         if (!isBlank(branch)) {
             jsql.append(format(" and \"%s\"~\"\\\"%s\\\"\"", CATS_BRANCH, branch));
         }
-        return client.getSearchClient().searchJql(jsql.toString()).claim().getIssues();
+        return claim(client.getSearchClient().searchJql(jsql.toString())).getIssues();
     }
 
     /**
@@ -273,7 +285,7 @@ public final class JiraClient {
      * @return A list of transitions for that URI.
      */
     public Iterable<Transition> listTransitions(final URI uri) {
-        return client.getIssueClient().getTransitions(uri).claim();
+        return claim(client.getIssueClient().getTransitions(uri));
     }
 
     /**
@@ -302,7 +314,7 @@ public final class JiraClient {
     public void closeIssue(final Issue issue, final String transitionName) {
         Transition transition = matchTransitions(transitionName, listTransitions(issue.getTransitionsUri()));
         TransitionInput input = new TransitionInput(transition.getId());
-        client.getIssueClient().transition(issue, input).claim();
+        claim(client.getIssueClient().transition(issue, input));
     }
 
     /**
@@ -321,6 +333,38 @@ public final class JiraClient {
                            final String transitionName) {
         Issue issue = matchIssue(issueId, listUnresolvedIssues(project, issueType, repo));
         closeIssue(issue, transitionName);
+    }
+
+    /**
+     * Unpack a promise while handling errors in as nice a way as possible.
+     *
+     * @param promise The promise to claim.
+     * @param <T> The type of the result from the promise.
+     * @return The result from the promise.
+     */
+    private <T> T claim(Promise<T> promise) {
+        try {
+            return promise.claim();
+        } catch (RestClientException e) {
+            Optional<Integer> code = e.getStatusCode();
+            if (code.isPresent()) {
+                if (401 == code.get()) {
+                    throw new RuntimeException("Authorisation error - check user and password", e);
+                } else {
+                    throw new RuntimeException(
+                            format("The REST client received an HTTP %d error - check Jira",
+                                    code.get()), e);
+                }
+            } else {
+                throw e;
+            }
+        } catch (RuntimeException e) {
+            if (e.getCause() instanceof UnknownHostException) {
+                throw new RuntimeException(format("Host at %s is unknown - check the Jira url", url), e);
+            } else {
+                throw e;
+            }
+        }
     }
 
 }
