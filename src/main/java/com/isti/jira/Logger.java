@@ -30,9 +30,20 @@ public final class Logger {
     public Logger(final AbstractBuild build,
                   final BuildListener listener,
                   final boolean debugFlag) {
-        project = build.getProject().getName();
-        out = listener.getLogger();
-        isDebug = debugFlag;
+        this(build.getProject().getName(), listener.getLogger(), debugFlag);
+    }
+
+    /**
+     * @param project The project name.
+     * @param out Destination for messages.
+     * @param isDebug Whether debug messages should be displayed.
+     */
+    public Logger(final String project,
+                  final PrintStream out,
+                  final boolean isDebug) {
+        this.project = project;
+        this.out = out;
+        this.isDebug = isDebug;
     }
 
     /**

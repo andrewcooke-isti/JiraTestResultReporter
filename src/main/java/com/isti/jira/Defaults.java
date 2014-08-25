@@ -81,6 +81,19 @@ public class Defaults {
     private Properties propertiesCache = null;
 
     /**
+     * A constructor for testing with known properties.
+     * @param props The properties to use.
+     */
+    public Defaults(final Properties props) {
+        propertiesCache = props;
+    }
+
+    /**
+     * The constructor for normal use.
+     */
+    public Defaults() {}
+
+    /**
      * Process a value, replacing null with any defaults found, and then raising an exception if still null when
      * nullOk is false.
      *

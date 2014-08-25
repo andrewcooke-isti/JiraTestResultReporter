@@ -92,7 +92,7 @@ public final class UniformTestResult {
      * @param result The TAP result to extract data from.
      * @param logger To record class data for debugging.
      */
-    private UniformTestResult(final TapTestResultResult result, final Logger logger) {
+    public UniformTestResult(final TapTestResultResult result, final Logger logger) {
         this(format("Test '%s' failed", result.getName()),
              format("%s: %s", result.getTitle(), result.getErrorDetails()),
              result.getErrorDetails());
@@ -104,7 +104,7 @@ public final class UniformTestResult {
      * @param workspace Workspace path (used to fix stack traces).
      * @param logger To record class data for debugging.
      */
-    private UniformTestResult(final CaseResult result, final String workspace, final Logger logger) {
+    public UniformTestResult(final CaseResult result, final String workspace, final Logger logger) {
         this(format("Test '%s' failed in %s", result.getName(), result.getClassName()),
              format("%s\nClass: %s\nTrace: %s",
                     result.getErrorDetails(),
@@ -119,7 +119,7 @@ public final class UniformTestResult {
      * @param result The generic result to extract data from.
      * @param logger To record class data for debugging.
      */
-    private UniformTestResult(final TestResult result, final Logger logger) {
+    public UniformTestResult(final TestResult result, final Logger logger) {
         this(format("Test '%s' failed", result.getName()),
              format("%s: %s", result.getTitle(), result.getErrorDetails()),
              result.getErrorDetails());
