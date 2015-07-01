@@ -121,6 +121,11 @@
             <artifactId>tap</artifactId>
             <version>1.18</version>
         </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>robot</artifactId>
+            <version>1.6.0</version>
+        </dependency>
         <!-- dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>git</artifactId>

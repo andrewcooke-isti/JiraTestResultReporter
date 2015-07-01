@@ -2,6 +2,8 @@ package com.isti.jira;
 
 import com.google.common.base.Function;
 import hudson.model.AbstractBuild;
+import hudson.plugins.robot.model.RobotCaseResult;
+import hudson.plugins.robot.model.RobotResult;
 import hudson.tasks.junit.CaseResult;
 import hudson.tasks.test.MetaTabulatedResult;
 import hudson.tasks.test.TestResult;
@@ -126,6 +128,11 @@ public final class UniformTestResult {
         logger.debug("Generic: %s", this);
     }
 
+    public UniformTestResult(final RobotCaseResult result, final Logger logger) {
+        this(result.getName(), result.getDisplayName(), result.getErrorMsg());
+        logger.debug("Robot: %s", this);
+    }
+
     /**
      * @param repo The git repo details.
      * @return A hash based on the error details and repo.
@@ -192,6 +199,10 @@ public final class UniformTestResult {
             logger.debug("Meta: %d", ((MetaTabulatedResult) results).getFailedTests().size());
             return transform(((MetaTabulatedResult) results).getFailedTests(),
                     new Factory(build, logger));
+        } else if (results instanceof RobotResult) {
+            logger.debug("Robot: %d", ((RobotResult) results).getAllFailedCases().size());
+            return transform(((RobotResult) results).getAllFailedCases(),
+                    new Factory(build, logger));
         } else {
             throw new RuntimeException(format("Cannot handle results of type %s",
                     results.getClass().getSimpleName()));
@@ -202,7 +213,7 @@ public final class UniformTestResult {
     /**
      * A function to transform test results into uniform instances.
      */
-    static class Factory implements Function<TestResult, UniformTestResult> {
+    static class Factory implements Function<Object, UniformTestResult> {
 
         /** The workspace path. */
         private String workspace;
@@ -220,17 +231,21 @@ public final class UniformTestResult {
         }
 
         /**
-         * @param result The tets result to convert.
+         * @param result The test result to convert.
          * @return A uniform representation of the result.
          */
-        public UniformTestResult apply(@Nullable final TestResult result) {
+        public UniformTestResult apply(@Nullable final Object result) {
             logger.debug(result.getClass().getSimpleName());
             if (result instanceof CaseResult) {
                 return new UniformTestResult((CaseResult) result, workspace, logger);
             } else if (result instanceof TapTestResultResult) {
                 return new UniformTestResult((TapTestResultResult) result, logger);
+            } else if (result instanceof RobotCaseResult) {
+                return new UniformTestResult((RobotCaseResult)result, logger);
+            } else if (result instanceof TestResult) {
+                return new UniformTestResult((TestResult)result, logger);
             } else {
-                return new UniformTestResult(result, logger);
+                throw new ClassCastException(result.getClass().getName());
             }
         }
     }
