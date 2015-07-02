@@ -23,7 +23,7 @@ import static org.apache.commons.lang.StringUtils.isBlank;
 
 /**
  * Different test plugins create different classes to represent test results.
- * This gives a uniform interface to them "all" (currently three).
+ * This gives a uniform interface to them "all" (currently four).
  *
  * To identify a test we use the following information:
  * - Repo URL
@@ -129,7 +129,9 @@ public final class UniformTestResult {
     }
 
     public UniformTestResult(final RobotCaseResult result, final Logger logger) {
-        this(result.getName(), result.getDisplayName(), result.getErrorMsg());
+        this(format("Test '%s' failed", result.getDisplayName()),
+             format("%s: %s", result.getDisplayName(), result.getErrorMsg()),
+             result.getErrorMsg());
         logger.debug("Robot: %s", this);
     }
 
@@ -242,10 +244,10 @@ public final class UniformTestResult {
                 return new UniformTestResult((TapTestResultResult) result, logger);
             } else if (result instanceof RobotCaseResult) {
                 return new UniformTestResult((RobotCaseResult)result, logger);
-            } else if (result instanceof TestResult) {
-                return new UniformTestResult((TestResult)result, logger);
             } else {
-                throw new ClassCastException(result.getClass().getName());
+                // if it's not, we get a class cast here.  but it's a bigger bug than
+                // that - something has changed in the results structures.
+                return new UniformTestResult((TestResult)result, logger);
             }
         }
     }
