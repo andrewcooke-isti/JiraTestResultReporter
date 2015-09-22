@@ -5,6 +5,7 @@ import hudson.model.AbstractBuild;
 import hudson.plugins.robot.model.RobotCaseResult;
 import hudson.plugins.robot.model.RobotResult;
 import hudson.tasks.junit.CaseResult;
+import hudson.tasks.test.AbstractTestResultAction;
 import hudson.tasks.test.MetaTabulatedResult;
 import hudson.tasks.test.TestResult;
 import org.apache.commons.codec.binary.Hex;
@@ -191,7 +192,7 @@ public final class UniformTestResult {
     public static Iterable<UniformTestResult> unpack(
             final AbstractBuild build,
             final Logger logger) {
-        Object results = build.getTestResultAction().getResult();
+        Object results = build.getAction(AbstractTestResultAction.class).getResult();
         logger.debug("Unpacking %s", results.getClass().getSimpleName());
         if (results instanceof TapStreamResult) {
             logger.debug("TAP: %d", ((TapStreamResult) results).getFailedTests2().size());
