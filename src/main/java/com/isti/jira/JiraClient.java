@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -85,6 +86,11 @@ public final class JiraClient {
      * Maximum number of known issues.
      */
     public static final int TOTAL_ISSUES_LIMIT = 10000; 
+    
+    /**
+     * Number of issues to request in one connection (see comments in code).
+     */
+    public static final int ISSUES_REQUEST_SIZE = 50; 
     
     /**
      * @param url The URL to connect to.
@@ -264,13 +270,22 @@ public final class JiraClient {
         if (!isBlank(branch)) {
             jsql.append(format(" and \"%s\"~\"\\\"%s\\\"\"", CATS_BRANCH, branch));
         }
-        Iterable<Issue> issues = 
-        			claim(client.getSearchClient().searchJql(jsql.toString(), TOTAL_ISSUES_LIMIT, 0, null)).getIssues();
-    	int found = Iterables.size(issues);
-    	if (found < TOTAL_ISSUES_LIMIT) {
-    		return issues;
-    	} else {
-			throw new RuntimeException(format("Too many known issues: over %d", found));
+        // if we request TOTAL_ISSUES_LIMIT we can easily get a timeout.  the documented solutions
+        // for a timeout are for v1.0 of the client.  for v2.0 i cannot see how to set this.  so
+        // instead we request smaller chunks (the default size is 50 and works ok) and accumulate.
+        ArrayList<Issue> issues = new ArrayList<Issue>();
+        int offset = 0;
+        while (true) {
+    		Iterable<Issue> chunk =
+    				claim(client.getSearchClient().searchJql(jsql.toString(), ISSUES_REQUEST_SIZE, offset, null)).getIssues();
+    		Iterables.addAll(issues, chunk);
+    		if (Iterables.size(issues) < ISSUES_REQUEST_SIZE) {
+    			return issues;
+    		} else if (issues.size() > TOTAL_ISSUES_LIMIT) {
+    			throw new RuntimeException(format("Too many known issues: over %d", issues.size()));
+    		} else {
+    			offset += ISSUES_REQUEST_SIZE;
+    		}
         }
     }
 
