@@ -48,7 +48,6 @@ public final class JiraReporter extends Notifier {
     public String username;
     public String password;
     public String transition;
-    public boolean createAllFlag;
     public boolean debugFlag;
 
     private static final String PLUGIN_NAME = "[JiraTestResultReporter]";
@@ -65,7 +64,6 @@ public final class JiraReporter extends Notifier {
                         final String username,
                         final String password,
                         final String transition,
-                        final boolean createAllFlag,
                         final boolean debugFlag) {
 
         this.projectKey = projectKey;
@@ -74,7 +72,6 @@ public final class JiraReporter extends Notifier {
         this.username = username;
         this.password = password;
         this.transition = transition;
-        this.createAllFlag = createAllFlag;
         this.debugFlag = debugFlag;
 
     }
@@ -155,15 +152,12 @@ public final class JiraReporter extends Notifier {
             } else if (duplicates.contains(hash)) {
                 logger.info("Ignoring duplicate %s", result);
 
-            } else if (result.isNew() || (this.createAllFlag)) {
+            } else {
                 logger.info("Creating issue in project %s at URL %s",
                             DEFAULTS.withDefault(Key.project, projectKey),
                             DEFAULTS.withDefault(Key.url, serverUrl));
                 client.createIssue(projectKey, issueType, repo, result);
                 duplicates.add(hash);
-
-            } else {
-                logger.info("This issue is old; not reporting (select the 'create all' checkbox to force)");
             }
         }
     }

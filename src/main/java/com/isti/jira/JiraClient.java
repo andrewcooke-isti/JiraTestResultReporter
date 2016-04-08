@@ -18,6 +18,7 @@ import com.atlassian.jira.rest.client.auth.BasicHttpAuthenticationHandler;
 import com.atlassian.jira.rest.client.internal.async.AsynchronousJiraRestClientFactory;
 import com.atlassian.util.concurrent.Promise;
 import com.google.common.base.Optional;
+import com.google.common.collect.Iterables;
 
 import java.io.IOException;
 import java.net.URI;
@@ -79,7 +80,12 @@ public final class JiraClient {
      * The URL to connect to (used in error messages).
      */
     private String savedUrl;
-
+    
+    /**
+     * Maximum number of known issues.
+     */
+    public static final int TOTAL_ISSUES_LIMIT = 10000; 
+    
     /**
      * @param url The URL to connect to.
      * @param user The Jira user.
@@ -250,7 +256,7 @@ public final class JiraClient {
         String url = DEFAULTS.withDefault(Key.repository, repo.getURL(), true);
         if (!isBlank(url)) {
             // both searches are on text fields and require "contains".
-            //for an exact match they also require quotes.
+            // for an exact match they also require quotes.
             // in jql that means "foo"~"\"bar\""
             jsql.append(format(" and \"%s\"~\"\\\"%s\\\"\"", CATS_REPOSITORY, url));
         }
@@ -258,7 +264,14 @@ public final class JiraClient {
         if (!isBlank(branch)) {
             jsql.append(format(" and \"%s\"~\"\\\"%s\\\"\"", CATS_BRANCH, branch));
         }
-        return claim(client.getSearchClient().searchJql(jsql.toString())).getIssues();
+        Iterable<Issue> issues = 
+        			claim(client.getSearchClient().searchJql(jsql.toString(), TOTAL_ISSUES_LIMIT, 0, null)).getIssues();
+    	int found = Iterables.size(issues);
+    	if (found < TOTAL_ISSUES_LIMIT) {
+    		return issues;
+    	} else {
+			throw new RuntimeException(format("Too many known issues: over %d", found));
+        }
     }
 
     /**
