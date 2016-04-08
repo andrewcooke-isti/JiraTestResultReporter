@@ -274,17 +274,15 @@ public final class JiraClient {
         // for a timeout are for v1.0 of the client.  for v2.0 i cannot see how to set this.  so
         // instead we request smaller chunks (the default size is 50 and works ok) and accumulate.
         ArrayList<Issue> issues = new ArrayList<Issue>();
-        int offset = 0;
         while (true) {
     		Iterable<Issue> chunk =
-    				claim(client.getSearchClient().searchJql(jsql.toString(), ISSUES_REQUEST_SIZE, offset, null)).getIssues();
+    				claim(client.getSearchClient().searchJql(jsql.toString(), ISSUES_REQUEST_SIZE, 
+    						issues.size(), null)).getIssues();
     		Iterables.addAll(issues, chunk);
-    		if (Iterables.size(issues) < ISSUES_REQUEST_SIZE) {
+    		if (Iterables.size(chunk) < ISSUES_REQUEST_SIZE) {
     			return issues;
     		} else if (issues.size() > TOTAL_ISSUES_LIMIT) {
     			throw new RuntimeException(format("Too many known issues: over %d", issues.size()));
-    		} else {
-    			offset += ISSUES_REQUEST_SIZE;
     		}
         }
     }
