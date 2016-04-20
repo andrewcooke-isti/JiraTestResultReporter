@@ -129,10 +129,16 @@ public final class UniformTestResult {
         logger.debug("Generic: %s", this);
     }
 
+    /**
+     * @param result The generic result to extract data from.
+     * @param logger To record class data for debugging.
+     */
     public UniformTestResult(final RobotCaseResult result, final Logger logger) {
         this(format("Test '%s' failed", result.getDisplayName()),
              format("%s: %s", result.getDisplayName(), result.getErrorMsg()),
-             result.getErrorMsg());
+             // in this case (robot) we don't have line numbers to worry about, so
+             // we include more information in the error message.
+             format("%s: %s", result.getDisplayName(), result.getErrorMsg()));
         logger.debug("Robot: %s", this);
     }
 
