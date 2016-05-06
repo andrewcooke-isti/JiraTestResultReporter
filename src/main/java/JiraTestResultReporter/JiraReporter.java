@@ -1,6 +1,7 @@
 package JiraTestResultReporter;
 
 import com.atlassian.jira.rest.client.api.domain.Issue;
+import com.google.common.base.Predicate;
 import com.isti.jira.Defaults;
 import com.isti.jira.JiraClient;
 import com.isti.jira.Logger;
@@ -26,6 +27,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static com.google.common.collect.Lists.newArrayList;
+import static com.google.common.collect.Iterables.filter;
 import static com.isti.jira.Defaults.Key;
 import static com.isti.jira.JiraClient.ALLOW_ANON;
 import static com.isti.jira.JiraClient.CATS_HASH;
@@ -51,8 +53,6 @@ public final class JiraReporter extends Notifier {
     public boolean debugFlag;
 
     private static final String PLUGIN_NAME = "[JiraTestResultReporter]";
-    private final String pInfo = format("%s [INFO]", PLUGIN_NAME);
-    private final String pDebug = format("%s [DEBUG]", PLUGIN_NAME);
 
     private static final Defaults DEFAULTS = new Defaults();
 
@@ -92,6 +92,7 @@ public final class JiraReporter extends Notifier {
         // create a list here to avoid repeatedly running constructors on each use
         Iterable<UniformTestResult> failedTests = newArrayList(unpack(build, logger));
         printFailedTests(logger, failedTests);
+        Iterable<UniformTestResult> filteredTests = filterSkippedTests(logger, failedTests);
         RepoDetails repo = new RepoDetails(build);
         logger.debug("Repo details: %s", repo);
 
@@ -100,8 +101,8 @@ public final class JiraReporter extends Notifier {
         JiraClient client = new JiraClient(serverUrl, username, password);
         try {
             Iterable<Issue> existingIssues = client.listUnresolvedIssues(projectKey, issueType, repo);
-            createJiraIssues(failedTests, existingIssues, repo, client, logger);
-            closeJiraIssues(failedTests, existingIssues, repo, client, logger);
+            createJiraIssues(filteredTests, existingIssues, repo, client, logger);
+            closeJiraIssues(filteredTests, existingIssues, repo, client, logger);
         } finally {
             client.close();
         }
@@ -115,6 +116,18 @@ public final class JiraReporter extends Notifier {
         for (UniformTestResult result : failedTests) {
             logger.debug(result.toString());
         }
+    }
+
+    private Iterable<UniformTestResult> filterSkippedTests(final Logger logger,
+            final Iterable<UniformTestResult> failedTests) {
+    	return filter(failedTests, new Predicate<UniformTestResult>() {
+    		@Override
+    		public boolean apply(UniformTestResult result) {
+    			boolean skipped = result.getDescription().contains("SkippedException");
+    			if (skipped) logger.info("Skipping '%s'", result);
+    			return !skipped;
+    		}
+    	});
     }
 
     /**
