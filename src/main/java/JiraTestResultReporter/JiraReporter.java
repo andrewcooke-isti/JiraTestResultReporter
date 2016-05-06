@@ -123,7 +123,6 @@ public final class JiraReporter extends Notifier {
     	return filter(failedTests, new Predicate<UniformTestResult>() {
     		@Override
     		public boolean apply(UniformTestResult result) {
-    			logger.info("%s", result.getDescription());
     			boolean skipped = result.getDescription().contains("SkippedException");
     			if (skipped) logger.info("Skipping '%s'", result);
     			return !skipped;
