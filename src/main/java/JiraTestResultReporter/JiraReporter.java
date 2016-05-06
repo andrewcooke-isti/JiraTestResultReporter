@@ -158,7 +158,7 @@ public final class JiraReporter extends Notifier {
                 logger.info("Creating issue in project %s at URL %s",
                             DEFAULTS.withDefault(Key.project, projectKey),
                             DEFAULTS.withDefault(Key.url, serverUrl));
-                client.createIssue(projectKey, issueType, repo, result);
+//                client.createIssue(projectKey, issueType, repo, result);
                 duplicates.add(hash);
             }
         }
