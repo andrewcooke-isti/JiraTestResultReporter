@@ -130,17 +130,6 @@ public final class JiraReporter extends Notifier {
     	});
     }
 
-    /**
-     * Generate a summary of the test (important because it's how we identify tests later).
-     *
-     * @param tag The tag used to identify this Jenkins project..
-     * @param failedTest The failing test.
-     * @return A summary used to identify the test.
-     */
-    private String summarize(final String tag, final CaseResult failedTest) {
-        return format("Test %s failed in %s %s", failedTest.getName(), failedTest.getClassName(), tag);
-    }
-
     void createJiraIssues(final Iterable<UniformTestResult> failedTests,
                           final Iterable<Issue> existingIssues,
                           final RepoDetails repo,
