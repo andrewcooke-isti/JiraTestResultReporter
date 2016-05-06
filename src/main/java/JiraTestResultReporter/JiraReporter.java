@@ -123,6 +123,7 @@ public final class JiraReporter extends Notifier {
     	return filter(failedTests, new Predicate<UniformTestResult>() {
     		@Override
     		public boolean apply(UniformTestResult result) {
+    			logger.info("%s", result.getDescription());
     			boolean skipped = result.getDescription().contains("SkippedException");
     			if (skipped) logger.info("Skipping '%s'", result);
     			return !skipped;
@@ -184,7 +185,7 @@ public final class JiraReporter extends Notifier {
                 count++;
             } else {
                 logger.info("Closing: '%s'", issue.getSummary());
-                client.closeIssue(issue, transition);
+//                client.closeIssue(issue, transition);
             }
         }
         logger.debug("Pre-existing issues: %d", count);
